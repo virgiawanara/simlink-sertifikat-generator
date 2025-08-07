@@ -174,14 +174,12 @@ class CertificateController {
     }
   }
 
-  // Fungsi untuk menghasilkan sertifikat visual
+  // UPDATE METHOD generateCertificate - BAGIAN QR CODE
   static async generateCertificate(req, res) {
     try {
       const certificateId = req.params.id;
-
-      const certificate = await CertificateService.getCertificateById(
-        certificateId
-      );
+      const certificate = await CertificateService.getCertificateById(certificateId);
+      
       if (!certificate) {
         console.warn(`Sertifikat dengan ID ${certificateId} tidak ditemukan.`);
         return res.status(404).json({
@@ -190,7 +188,7 @@ class CertificateController {
         });
       }
 
-      // Ensure the uploads directory exists
+      // Pastikan direktori uploads ada
       const uploadDir = path.join(__dirname, "../uploads/certificates");
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
@@ -209,7 +207,6 @@ class CertificateController {
         bgImage = await loadImage(bgPath);
         ctx.drawImage(bgImage, 0, 0, canvasWidth, canvasHeight);
       } catch (e) {
-        // Fallback to white background if image not found
         ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
         console.error("Gagal memuat background sertifikat:", e.message);
@@ -408,12 +405,8 @@ class CertificateController {
       const qrSize = 200;
       const qrX = (canvasWidth - qrSize) / 2;
       const qrY = canvasHeight - 470;
-      const qrCodeData = [
-        `Judul         : HASIL TES PSIKOLOGI`,
-        `No Sertifikat : ${certificate.certificateNumber}`,
-        `Nama          : ${certificate.participantFullName}`,
-        `Golongan SIM  : ${certificate.licenseClass}`,
-      ].join("\n");
+      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173"; // URL frontend
+      const qrCodeData = `${baseUrl}/certificate/view/${certificate.certificateNumber}`;
       const qrCodeBuffer = await QRCode.toBuffer(qrCodeData, {
         width: qrSize,
         margin: 1,
@@ -424,7 +417,7 @@ class CertificateController {
       ctx.font = "bold 20px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "center";
-      ctx.fillText("QR Code", qrX + qrSize / 2, qrY - 15);
+      ctx.fillText("Scan untuk Verifikasi", qrX + qrSize / 2, qrY - 15);
       ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
       ctx.restore();
 
@@ -510,7 +503,8 @@ class CertificateController {
           certificateUrl: `/uploads/certificates/${fileName}`,
           certificateId: certificate.id,
           fileName: fileName,
-          expirationDate: expirationDate,
+          qrCodeUrl: qrCodeData, // Tambahkan ini untuk debugging
+          expirationDate: CertificateController.calculateExpirationDate(certificate.issueDate || new Date()),
           generatedBy: {
             id: req.user.id,
             email: req.user.email,
@@ -769,6 +763,258 @@ class CertificateController {
         success: false,
         message: error.message,
       });
+    }
+  }
+
+  // Method untuk viewing sertifikat secara public (untuk QR Code)
+  static async viewCertificatePublic(req, res) {
+    try {
+      const { certificateNumber } = req.params;
+      const certificate = await CertificateService.getCertificateByCertificateNumber(certificateNumber);
+
+      if (!certificate) {
+        return res.status(404).json({
+          success: false,
+          message: "Sertifikat tidak ditemukan"
+        });
+      }
+
+      // Return data minimal untuk public view
+      res.status(200).json({
+        success: true,
+        message: "Sertifikat ditemukan",
+        data: {
+          id: certificate.id,
+          participantFullName: certificate.participantFullName,
+          certificateNumber: certificate.certificateNumber,
+          licenseClass: certificate.licenseClass,
+          certificateType: certificate.certificateType,
+          issueDate: certificate.issueDate,
+          expirationDate: certificate.expirationDate,
+          certificateFileUrl: certificate.certificateFileUrl,
+          isValid: new Date() < new Date(certificate.expirationDate)
+        }
+      });
+    } catch (error) {
+      console.error("Error saat mengambil sertifikat public:", error.message);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  // Alternative method menggunakan ID
+  static async viewCertificateByIdPublic(req, res) {
+    try {
+      const { id } = req.params;
+      const certificate = await CertificateService.getCertificateById(id);
+
+      res.status(200).json({
+        success: true,
+        message: "Sertifikat ditemukan",
+        data: {
+          id: certificate.id,
+          participantFullName: certificate.participantFullName,
+          certificateNumber: certificate.certificateNumber,
+          licenseClass: certificate.licenseClass,
+          certificateType: certificate.certificateType,
+          issueDate: certificate.issueDate,
+          expirationDate: certificate.expirationDate,
+          certificateFileUrl: certificate.certificateFileUrl,
+          isValid: new Date() < new Date(certificate.expirationDate)
+        }
+      });
+    } catch (error) {
+      console.error("Error saat mengambil sertifikat public:", error.message);
+      res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  // Method untuk download sertifikat secara public berdasarkan certificate number
+  static async downloadCertificatePublic(req, res) {
+    try {
+      console.log("Download request for certificate:", req.params.certificateNumber);
+      
+      const { certificateNumber } = req.params;
+      const certificate = await CertificateService.getCertificateByCertificateNumber(certificateNumber);
+  
+      if (!certificate.certificateFileUrl) {
+        return res.status(404).json({
+          success: false,
+          message: "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
+        });
+      }
+  
+      const filePath = path.join(__dirname, "..", certificate.certificateFileUrl);
+      console.log("File path:", filePath);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({
+          success: false,
+          message: "File sertifikat tidak ditemukan di server.",
+        });
+      }
+  
+      // ✅ Set explicit CORS headers untuk download
+      const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.header('Access-Control-Allow-Origin', allowedOrigin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
+      
+      // Konversi PNG ke PDF dan kirim ke client
+      const fileName = `certificate-${certificate.certificateNumber}.pdf`;
+      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+      res.setHeader("Content-Type", "application/pdf");
+      
+      console.log("Starting PDF generation for:", fileName);
+      
+      const doc = new PDFDocument({ autoFirstPage: false });
+      
+      // ✅ Handle PDF stream errors
+      doc.on('error', (error) => {
+        console.error("PDF generation error:", error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: "Error generating PDF",
+          });
+        }
+      });
+      
+      // Pipe PDF ke response
+      doc.pipe(res);
+      
+      // Dapatkan ukuran gambar PNG
+      let imageDimensions;
+      try {
+        const sizeOf = require("image-size");
+        imageDimensions = sizeOf(filePath);
+        console.log("Image dimensions:", imageDimensions);
+      } catch (e) {
+        console.warn("Could not get image dimensions, using default:", e.message);
+        imageDimensions = { width: 595, height: 842, type: "png" };
+      }
+      
+      // Add page dan image
+      doc.addPage({
+        size: [imageDimensions.width, imageDimensions.height],
+        margin: 0,
+      });
+      
+      doc.image(filePath, 0, 0, {
+        width: imageDimensions.width,
+        height: imageDimensions.height,
+      });
+  
+      doc.end();
+      console.log("PDF generation completed for:", fileName);
+      
+    } catch (error) {
+      console.error("Error saat download sertifikat public:", error.message);
+      console.error("Stack trace:", error.stack);
+      
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: error.message,
+        });
+      }
+    }
+  }
+  
+  // Method untuk download sertifikat secara public berdasarkan ID
+  static async downloadCertificateByIdPublic(req, res) {
+    try {
+      console.log("Download request for certificate ID:", req.params.id);
+      
+      const { id } = req.params;
+      const certificate = await CertificateService.getCertificateById(id);
+  
+      if (!certificate.certificateFileUrl) {
+        return res.status(404).json({
+          success: false,
+          message: "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
+        });
+      }
+  
+      const filePath = path.join(__dirname, "..", certificate.certificateFileUrl);
+      console.log("File path:", filePath);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({
+          success: false,
+          message: "File sertifikat tidak ditemukan di server.",
+        });
+      }
+  
+      // ✅ Set explicit CORS headers untuk download
+      const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.header('Access-Control-Allow-Origin', allowedOrigin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
+      
+      // Konversi PNG ke PDF dan kirim ke client
+      const fileName = `certificate-${certificate.certificateNumber}.pdf`;
+      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+      res.setHeader("Content-Type", "application/pdf");
+      
+      console.log("Starting PDF generation for:", fileName);
+      
+      const doc = new PDFDocument({ autoFirstPage: false });
+      
+      // ✅ Handle PDF stream errors
+      doc.on('error', (error) => {
+        console.error("PDF generation error:", error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: "Error generating PDF",
+          });
+        }
+      });
+      
+      // Pipe PDF ke response
+      doc.pipe(res);
+      
+      // Dapatkan ukuran gambar PNG
+      let imageDimensions;
+      try {
+        const sizeOf = require("image-size");
+        imageDimensions = sizeOf(filePath);
+        console.log("Image dimensions:", imageDimensions);
+      } catch (e) {
+        console.warn("Could not get image dimensions, using default:", e.message);
+        imageDimensions = { width: 595, height: 842, type: "png" };
+      }
+      
+      // Add page dan image
+      doc.addPage({
+        size: [imageDimensions.width, imageDimensions.height],
+        margin: 0,
+      });
+      
+      doc.image(filePath, 0, 0, {
+        width: imageDimensions.width,
+        height: imageDimensions.height,
+      });
+  
+      doc.end();
+      console.log("PDF generation completed for:", fileName);
+      
+    } catch (error) {
+      console.error("Error saat download sertifikat public (by ID):", error.message);
+      console.error("Stack trace:", error.stack);
+      
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: error.message,
+        });
+      }
     }
   }
 }

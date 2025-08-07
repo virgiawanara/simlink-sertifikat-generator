@@ -1,4 +1,3 @@
-// routes/certificateRoutes.js
 const express = require("express");
 const router = express.Router();
 const certificateController = require("../controllers/certificateController");
@@ -21,6 +20,24 @@ console.log("handleMulterError:", typeof handleMulterError);
 console.log("validateUploadedFiles:", typeof validateUploadedFiles);
 console.log("cleanupFilesOnError:", typeof cleanupFilesOnError);
 
+// ========================================
+// PUBLIC ROUTES (TANPA AUTHENTICATION)
+// ========================================
+// Route untuk viewing sertifikat via QR Code (tanpa authentication untuk public access)
+router.get('/view/:certificateNumber', certificateController.viewCertificatePublic);
+
+// Alternative route dengan ID (jika ingin menggunakan ID sebagai gantinya)
+router.get('/view/id/:id', certificateController.viewCertificateByIdPublic);
+
+// Public download berdasarkan certificate number
+router.get('/download/:certificateNumber', certificateController.downloadCertificatePublic);
+
+// Public download berdasarkan ID
+router.get('/download/id/:id', certificateController.downloadCertificateByIdPublic);
+
+// ========================================
+// PROTECTED ROUTES (DENGAN AUTHENTICATION)
+// ========================================
 // Semua route di bawah ini akan memerlukan token (dari cookie atau header)
 router.use(authenticateToken);
 

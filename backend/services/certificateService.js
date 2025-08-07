@@ -291,6 +291,30 @@ class CertificateService {
       throw error;
     }
   }
+  
+  static async getCertificateByCertificateNumber(certificateNumber) {
+    try {
+      const certificate = await Certificate.findOne({
+        where: { certificateNumber: certificateNumber },
+        include: [
+          {
+            model: User,
+            as: "issuer",
+            attributes: ["id", "email", "role"], // ✅ HANYA kolom yang ada
+          },
+        ],
+      });
+  
+      if (!certificate) {
+        throw new Error("Sertifikat tidak ditemukan");
+      }
+  
+      return certificate;
+    } catch (error) {
+      console.error("Error dalam getCertificateByCertificateNumber:", error.message);
+      throw new Error(`Gagal mengambil sertifikat: ${error.message}`);
+    }
+  }
 }
 
 module.exports = CertificateService;
