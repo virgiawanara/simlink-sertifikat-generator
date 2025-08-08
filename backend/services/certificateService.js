@@ -136,17 +136,25 @@ class CertificateService {
         transformedData.certificate_number = this.generateCertificateNumber();
       }
 
-      // ✅ PERBAIKAN: Periksa NIK hanya jika tidak null/empty
-      if (transformedData.nik && transformedData.nik.trim() !== "") {
-        const existingNIK = await Certificate.findOne({
-          where: { nik: transformedData.nik },
-        });
-        if (existingNIK) {
-          throw new Error("NIK peserta sudah terdaftar dalam sertifikat lain.");
-        }
-      } else {
-        // Set NIK ke null jika kosong
-        transformedData.nik = null;
+      // ✅ PERBAIKAN: NIK sekarang wajib, harus selalu ada dan valid
+      if (!transformedData.nik || transformedData.nik.trim() === "") {
+        throw new Error("NIK wajib diisi dan tidak boleh kosong.");
+      }
+      
+      if (transformedData.nik.length !== 16) {
+        throw new Error("NIK harus tepat 16 digit angka.");
+      }
+      
+      if (!/^\d{16}$/.test(transformedData.nik)) {
+        throw new Error("NIK harus berupa 16 digit angka.");
+      }
+
+      // Periksa apakah NIK sudah ada
+      const existingNIK = await Certificate.findOne({
+        where: { nik: transformedData.nik },
+      });
+      if (existingNIK) {
+        throw new Error("NIK peserta sudah terdaftar dalam sertifikat lain.");
       }
 
       // Set tanggal pembuatan jika tidak ada
@@ -212,23 +220,32 @@ class CertificateService {
         }
       }
 
-      // ✅ PERBAIKAN: Periksa NIK hanya jika ada dan tidak kosong
+      // ✅ PERBAIKAN: Validasi NIK untuk update
       if (transformedData.nik !== undefined && transformedData.nik !== certificate.nik) {
-        if (transformedData.nik && transformedData.nik.trim() !== "") {
-          const existingNIK = await Certificate.findOne({
-            where: {
-              nik: transformedData.nik,
-              id: { [Op.ne]: id },
-            },
-          });
-          if (existingNIK) {
-            throw new Error(
-              "NIK peserta yang baru sudah terdaftar pada sertifikat lain."
-            );
-          }
-        } else {
-          // Set NIK ke null jika kosong
-          transformedData.nik = null;
+        // NIK sedang diupdate, validasi
+        if (!transformedData.nik || transformedData.nik.trim() === "") {
+          throw new Error("NIK wajib diisi dan tidak boleh kosong.");
+        }
+        
+        if (transformedData.nik.length !== 16) {
+          throw new Error("NIK harus tepat 16 digit angka.");
+        }
+        
+        if (!/^\d{16}$/.test(transformedData.nik)) {
+          throw new Error("NIK harus berupa 16 digit angka.");
+        }
+
+        // Periksa apakah NIK baru sudah ada di sertifikat lain
+        const existingNIK = await Certificate.findOne({
+          where: {
+            nik: transformedData.nik,
+            id: { [Op.ne]: id },
+          },
+        });
+        if (existingNIK) {
+          throw new Error(
+            "NIK peserta yang baru sudah terdaftar pada sertifikat lain."
+          );
         }
       }
 

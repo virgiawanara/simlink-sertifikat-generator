@@ -12,10 +12,11 @@ const createCertificateSchema = Joi.object({
 
   nik: Joi.string()
     .pattern(/^\d{16}$/)
-    .optional()
-    .allow('', null)
+    .required() // ✅ PERBAIKAN: NIK sekarang wajib
     .messages({
       "string.pattern.base": "NIK harus berupa 16 digit angka",
+      "any.required": "NIK wajib diisi",
+      "string.empty": "NIK tidak boleh kosong",
     }),
 
   gender: Joi.string().valid("Laki-laki", "Perempuan").required().messages({
@@ -103,10 +104,10 @@ const updateCertificateSchema = Joi.object({
 
   nik: Joi.string()
     .pattern(/^\d{16}$/)
-    .optional()
-    .allow('', null)
+    .optional() // Update tetap optional karena tidak semua field harus diupdate
     .messages({
       "string.pattern.base": "NIK harus berupa 16 digit angka",
+      "string.empty": "NIK tidak boleh kosong jika diisi",
     }),
 
   gender: Joi.string().valid("Laki-laki", "Perempuan").optional().messages({

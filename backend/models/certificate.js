@@ -38,11 +38,22 @@ module.exports = (sequelize, DataTypes) => {
     },
     nik: {
       type: DataTypes.STRING(16),
-      allowNull: true, // ✅ NIK opsional
+      allowNull: false, // ✅ PERBAIKAN: NIK sekarang wajib diisi
       unique: true,
       validate: {
-        len: [16, 16],
-        isNumeric: true
+        notNull: {
+          msg: "NIK wajib diisi"
+        },
+        notEmpty: {
+          msg: "NIK tidak boleh kosong"
+        },
+        len: {
+          args: [16, 16],
+          msg: "NIK harus tepat 16 digit"
+        },
+        isNumeric: {
+          msg: "NIK harus berupa angka"
+        }
       },
       field: "nik",
     },

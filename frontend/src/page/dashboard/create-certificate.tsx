@@ -265,9 +265,10 @@ export default function CertificateCreationPage() {
     event.preventDefault();
     setIsFormLoading(true);
 
-    // ✅ PERBAIKAN: Updated validation dengan nama field database
+    // ✅ PERBAIKAN: Validasi termasuk NIK yang sekarang wajib
     if (
       !certificateFormData.full_name ||
+      !certificateFormData.nik ||
       !certificateFormData.gender ||
       !certificateFormData.birth_place ||
       !certificateFormData.birth_date ||
@@ -277,16 +278,30 @@ export default function CertificateCreationPage() {
       !certificateFormData.domicile
     ) {
       toast.error("Input Tidak Lengkap", {
-        description: "Mohon lengkapi semua data wajib.",
+        description: "Mohon lengkapi semua data wajib termasuk NIK.",
       });
       setIsFormLoading(false);
       return;
     }
 
-    // ✅ PERBAIKAN: Validate NIK only if provided
-    if (certificateFormData.nik && 
-        certificateFormData.nik.trim() !== "" && 
-        certificateFormData.nik.length !== 16) {
+    // ✅ PERBAIKAN: Validasi NIK wajib dan format
+    if (!certificateFormData.nik || certificateFormData.nik.trim() === "") {
+      toast.error("NIK Wajib Diisi", {
+        description: "NIK harus diisi dan tidak boleh kosong.",
+      });
+      setIsFormLoading(false);
+      return;
+    }
+
+    if (certificateFormData.nik.length !== 16) {
+      toast.error("NIK Tidak Valid", {
+        description: "NIK harus berupa 16 digit angka.",
+      });
+      setIsFormLoading(false);
+      return;
+    }
+
+    if (!/^\d{16}$/.test(certificateFormData.nik)) {
       toast.error("NIK Tidak Valid", {
         description: "NIK harus berupa 16 digit angka.",
       });
@@ -372,7 +387,7 @@ export default function CertificateCreationPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="nik">NIK (Opsional)</Label>
+                  <Label htmlFor="nik">NIK *</Label>
                   <Input
                     id="nik"
                     placeholder="Masukkan NIK (16 digit)"
@@ -381,9 +396,10 @@ export default function CertificateCreationPage() {
                     maxLength={16}
                     pattern="[0-9]{16}"
                     title="NIK harus berupa 16 digit angka"
+                    required
                   />
                   <p className="text-xs text-gray-500">
-                    NIK bersifat opsional. Jika diisi, harus 16 digit angka.
+                    NIK wajib diisi dan harus 16 digit angka.
                   </p>
                 </div>
 

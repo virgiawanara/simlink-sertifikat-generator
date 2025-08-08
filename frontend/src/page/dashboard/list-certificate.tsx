@@ -452,6 +452,28 @@ export default function CertificateListPage() {
   const handleUpdateSubmit = async () => {
     if (!certificateToEdit) return;
 
+    // ✅ PERBAIKAN: Validasi NIK wajib untuk update
+    if (!updatedFormData.nik || updatedFormData.nik.trim() === "") {
+      toast.error("NIK Wajib Diisi", {
+        description: "NIK harus diisi dan tidak boleh kosong.",
+      });
+      return;
+    }
+
+    if (updatedFormData.nik.length !== 16) {
+      toast.error("NIK Tidak Valid", {
+        description: "NIK harus berupa 16 digit angka.",
+      });
+      return;
+    }
+
+    if (!/^\d{16}$/.test(updatedFormData.nik)) {
+      toast.error("NIK Tidak Valid", {
+        description: "NIK harus berupa 16 digit angka.",
+      });
+      return;
+    }
+
     try {
       const formData = new FormData();
 
@@ -684,7 +706,7 @@ export default function CertificateListPage() {
                             {certificateItem.full_name}
                           </TableCell>
                           <TableCell>
-                            {certificateItem.nik || "-"}
+                            {certificateItem.nik}
                           </TableCell>
                           <TableCell>{certificateItem.gender}</TableCell>
                           <TableCell>
@@ -844,7 +866,7 @@ export default function CertificateListPage() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="nik" className="text-left">
-                NIK
+                NIK *
               </Label>
               <Input
                 id="nik"
@@ -854,7 +876,8 @@ export default function CertificateListPage() {
                 className="col-span-3"
                 maxLength={16}
                 pattern="[0-9]{16}"
-                placeholder="16 digit angka (opsional)"
+                placeholder="16 digit angka (wajib)"
+                required
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
