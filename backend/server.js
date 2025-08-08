@@ -43,6 +43,37 @@ app.use((req, res, next) => {
   next();
 });
 
+// ✅ Test endpoint untuk debugging
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Backend server is running!',
+    database: 'PostgreSQL',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// ✅ Database connection test endpoint
+app.get('/api/test/db', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({
+      success: true,
+      message: 'PostgreSQL connection successful!',
+      database: sequelize.config.database,
+      host: sequelize.config.host,
+      port: sequelize.config.port
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

@@ -74,7 +74,19 @@ export default function UserProvider({ children }: UserProviderProps) {
   }, []);
 
   useEffect(() => {
-    fetchUser();
+    // ✅ FIX: Only fetch user profile if NOT on auth pages
+    const currentPath = window.location.pathname;
+    const isAuthPage = currentPath === '/login' || currentPath === '/signup';
+    
+    if (!isAuthPage) {
+      // ✅ Fetch user profile only on protected pages
+      fetchUser();
+    } else {
+      // ✅ On auth pages, stop loading without fetching
+      setLoading(false);
+      setUser(null);
+      setError(null);
+    }
   }, [fetchUser]);
 
   const contextValue = useMemo(

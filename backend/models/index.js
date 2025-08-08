@@ -13,11 +13,41 @@ let sequelize;
 if (config.use_env_variable) {
   sequelize = new Sequelize(process.env[config.use_env_variable], config);
 } else {
+  // ✅ ENHANCED PostgreSQL configuration
   sequelize = new Sequelize(config.database, config.username, config.password, {
     host: config.host,
-    dialect: config.dialect,
-    port: config.port,
+    dialect: 'postgres', // ✅ Force PostgreSQL dialect
+    port: config.port || 5432, // ✅ Default PostgreSQL port
     logging: config.logging,
+    
+    // ✅ PostgreSQL connection pool
+    pool: {
+      max: 10,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
+    
+    // ✅ PostgreSQL specific options
+    dialectOptions: {
+      // SSL configuration for production
+      ...(env === 'production' && {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      })
+    },
+    
+    // ✅ Timezone configuration
+    timezone: '+07:00',
+    
+    // ✅ Query options
+    define: {
+      timestamps: true,
+      underscored: true, // Use snake_case for columns
+      freezeTableName: true, // Don't pluralize table names
+    }
   });
 }
 

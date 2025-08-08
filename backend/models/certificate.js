@@ -13,17 +13,16 @@ module.exports = (sequelize, DataTypes) => {
       participantFullName: {
         type: DataTypes.STRING(255),
         allowNull: false,
-        field: "full_name",
+        field: "participant_full_name", // ✅ KONSISTEN dengan nama field
       },
       participantNIK: {
         type: DataTypes.STRING(16),
         allowNull: true,
         unique: true,
-        field: "nik",
+        field: "participant_nik", // ✅ KONSISTEN dengan nama field
       },
       gender: {
-        // PERBAIKAN: Ubah menjadi konsisten dengan Postman dan validator
-        type: DataTypes.ENUM("Laki-laki", "Perempuan"), // Huruf kecil 'l' di 'laki'
+        type: DataTypes.ENUM("Laki-laki", "Perempuan"),
         allowNull: false,
       },
       birthPlace: {
@@ -41,13 +40,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       certificateType: {
-        // PERBAIKAN: Sesuaikan dengan validator
-        type: DataTypes.ENUM("Buat Baru", "Perpanjang"),
+        type: DataTypes.ENUM("Buat Baru", "Perpanjang"), // ✅ KONSISTEN dengan frontend
         allowNull: false,
         field: "certificate_type",
       },
       licenseClass: {
-        // PERBAIKAN: Tambahkan D sesuai validator, atau sesuaikan validator
         type: DataTypes.ENUM("A", "B", "C"),
         allowNull: false,
         field: "license_class",
@@ -57,12 +54,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       participantPhotoUrl: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(500), // ✅ DIPERBESAR untuk file paths yang panjang
         allowNull: true,
         field: "participant_photo_url",
       },
       signatureQrUrl: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(500), // ✅ DIPERBESAR untuk file paths yang panjang
         allowNull: true,
         field: "signature_qr_url",
       },
@@ -73,18 +70,18 @@ module.exports = (sequelize, DataTypes) => {
         field: "certificate_number",
       },
       issueDate: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE, // ✅ UBAH ke DATE (bukan DATEONLY) untuk timestamp lengkap
         allowNull: false,
         field: "issue_date",
-        defaultValue: DataTypes.NOW, // Auto set jika tidak disediakan
+        defaultValue: DataTypes.NOW,
       },
       expirationDate: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE, // ✅ UBAH ke DATE (bukan DATEONLY) untuk timestamp lengkap
         allowNull: true,
         field: "expiration_date",
       },
       certificateFileUrl: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(500), // ✅ DIPERBESAR untuk file paths yang panjang
         allowNull: true,
         field: "certificate_file_url",
       },
@@ -92,11 +89,23 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
         field: "issued_by_user_id",
+        references: {
+          model: 'users', // ✅ TAMBAH FOREIGN KEY REFERENCE
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       userId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         field: "user_id",
+        references: {
+          model: 'users', // ✅ TAMBAH FOREIGN KEY REFERENCE jika diperlukan
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
       },
     },
     {
@@ -110,7 +119,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
           unique: true,
-          fields: ["nik"], // Index untuk NIK
+          fields: ["participant_nik"], // ✅ KONSISTEN dengan field name
         },
         {
           fields: ["issued_by_user_id"],
@@ -125,7 +134,7 @@ module.exports = (sequelize, DataTypes) => {
           fields: ["user_id"],
         },
         {
-          fields: ["full_name"], // Index untuk pencarian nama
+          fields: ["participant_full_name"], // ✅ KONSISTEN dengan field name
         },
       ],
     }
@@ -135,6 +144,12 @@ module.exports = (sequelize, DataTypes) => {
     Certificate.belongsTo(models.User, {
       foreignKey: "issuedByUserId",
       as: "issuer",
+    });
+    
+    // ✅ TAMBAH ASSOCIATION untuk userId jika diperlukan
+    Certificate.belongsTo(models.User, {
+      foreignKey: "userId", 
+      as: "participant",
     });
   };
 
