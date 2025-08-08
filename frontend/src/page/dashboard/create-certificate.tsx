@@ -55,7 +55,7 @@ interface CertificateData {
   user_id?: number;
 }
 
-// ✅ Interface form menggunakan nama field database
+// ✅ Interface form menggunakan nama field database (signature QR dihapus)
 interface CertificateFormData {
   full_name: string;
   nik: string;
@@ -67,7 +67,7 @@ interface CertificateFormData {
   license_class: "A" | "A Umum" | "B1" | "B1 Umum" | "B2" | "B2 Umum" | "C" | "C1" | "C2" | "D" | "D1" | "";  // ✅ SESUAI SPESIFIKASI
   domicile: string;
   participant_photo_url: File | null;
-  signature_qr_url: File | null;
+  // ✅ PERBAIKAN: signature_qr_url dihapus
 }
 
 // Updated API hook dengan nama field database
@@ -108,8 +108,6 @@ const useCertificateAPI = () => {
           if (typedKey === "birth_date" && value instanceof Date) {
             requestData.append(typedKey, value.toISOString().split("T")[0]);
           } else if (typedKey === "participant_photo_url" && value instanceof File) {
-            requestData.append(typedKey, value);
-          } else if (typedKey === "signature_qr_url" && value instanceof File) {
             requestData.append(typedKey, value);
           } else if (typedKey === "nik") {
             // ✅ PERBAIKAN: Only append NIK if it's not empty
@@ -166,7 +164,7 @@ export default function CertificateCreationPage() {
 
   const [isFormLoading, setIsFormLoading] = useState<boolean>(false);
 
-  // ✅ PERBAIKAN: State menggunakan nama field database
+  // ✅ PERBAIKAN: State menggunakan nama field database (signature QR dihapus)
   const [certificateFormData, setCertificateFormData] =
     useState<CertificateFormData>({
       full_name: "",
@@ -179,7 +177,7 @@ export default function CertificateCreationPage() {
       license_class: "",
       domicile: "",
       participant_photo_url: null,
-      signature_qr_url: null,
+      // signature_qr_url dihapus
     });
 
   const handleInputFieldChange = (
@@ -243,21 +241,7 @@ export default function CertificateCreationPage() {
     }
   };
 
-  const handleSignatureImageUpload = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setCertificateFormData((previousData) => ({
-        ...previousData,
-        signature_qr_url: event.target.files![0],
-      }));
-    } else {
-      setCertificateFormData((previousData) => ({
-        ...previousData,
-        signature_qr_url: null,
-      }));
-    }
-  };
+  // ✅ PERBAIKAN: handleSignatureImageUpload dihapus - tidak ada input signature
 
   const handleCertificateFormSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -331,7 +315,7 @@ export default function CertificateCreationPage() {
         license_class: "",
         domicile: "",
         participant_photo_url: null,
-        signature_qr_url: null,
+        // signature_qr_url dihapus
       });
       
       // Reset file inputs
@@ -339,10 +323,7 @@ export default function CertificateCreationPage() {
         "participantPhotoUpload"
       ) as HTMLInputElement;
       if (photoUploadElement) photoUploadElement.value = "";
-      const signatureUploadElement = document.getElementById(
-        "signatureImageUpload"
-      ) as HTMLInputElement;
-      if (signatureUploadElement) signatureUploadElement.value = "";
+      // ✅ PERBAIKAN: signatureUploadElement reset dihapus
     } catch (error: any) {
       console.error("Error creating certificate:", error);
       toast.error("Gagal Membuat Sertifikat", {
@@ -585,59 +566,6 @@ export default function CertificateCreationPage() {
                     </Label>
                   </div>
                 </div>
-
-                <div className="space-y-2 col-span-full">
-                  <Label htmlFor="signatureImageUpload">
-                    QR Code Tanda Tangan (Opsional)
-                  </Label>
-                  <div className="flex items-center justify-center w-full">
-                    <Label
-                      htmlFor="signatureImageUpload"
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <svg
-                          className="w-8 h-8 mb-4 text-gray-500"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 20 16">
-                          <path
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                          />
-                        </svg>
-                        <p className="mb-2 text-sm text-gray-500">
-                          <span className="font-semibold">
-                            Klik untuk mengunggah
-                          </span>{" "}
-                          atau seret dan lepas
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          PNG, JPG (MAX. 5MB)
-                        </p>
-                        {certificateFormData.signature_qr_url && (
-                          <p className="text-xs text-blue-600 mt-1">
-                            File terpilih:{" "}
-                            {certificateFormData.signature_qr_url.name}
-                          </p>
-                        )}
-                      </div>
-                      <Input
-                        id="signatureImageUpload"
-                        type="file"
-                        className="hidden"
-                        onChange={handleSignatureImageUpload}
-                        accept="image/png, image/jpeg, image/jpg"
-                      />
-                    </Label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 text-sm text-gray-600">
-                <p>* Field wajib diisi</p>
               </div>
 
               <Button

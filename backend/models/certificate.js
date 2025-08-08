@@ -106,11 +106,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       field: "participant_photo_url",
     },
-    signature_qr_url: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      field: "signature_qr_url",
-    },
+    // ✅ PERBAIKAN: signature_qr_url field dihapus - menggunakan static image
     certificate_number: {
       type: DataTypes.STRING(50),
       allowNull: false,

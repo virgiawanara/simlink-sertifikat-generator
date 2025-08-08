@@ -263,10 +263,10 @@ export default function CertificateListPage() {
     Partial<CertificateData>
   >({});
 
-  // ✅ PERBAIKAN: State untuk file dengan field names yang benar
+  // ✅ PERBAIKAN: State untuk file dengan field names yang benar (signature QR dihapus)
   const [updateFormFiles, setUpdateFormFiles] = useState<{
     participant_photo_url?: File;
-    signature_qr_url?: File;
+    // signature_qr_url dihapus
   }>({});
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -486,16 +486,14 @@ export default function CertificateListPage() {
         }
       });
 
-      // ✅ PERBAIKAN: Tambahkan file ke FormData dengan field names yang benar
+      // ✅ PERBAIKAN: Tambahkan file ke FormData dengan field names yang benar (signature QR dihapus)
       if (updateFormFiles.participant_photo_url) {
         formData.append(
           "participant_photo_url",
           updateFormFiles.participant_photo_url
         );
       }
-      if (updateFormFiles.signature_qr_url) {
-        formData.append("signature_qr_url", updateFormFiles.signature_qr_url);
-      }
+      // signature_qr_url append dihapus
 
       await updateCertificateById(certificateToEdit.id, formData);
       toast.success("Sertifikat Berhasil Diperbarui", {
@@ -957,20 +955,7 @@ export default function CertificateListPage() {
                 accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
               />
             </div>
-            {/* Input untuk mengunggah tanda tangan QR */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="signature_qr_url" className="text-left">
-                Tanda Tangan QR
-              </Label>
-              <Input
-                id="signature_qr_url"
-                name="signature_qr_url"
-                type="file"
-                onChange={handleFileChange}
-                className="col-span-3"
-                accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
-              />
-            </div>
+            {/* ✅ PERBAIKAN: Input untuk signature QR dihapus */}
           </div>
           <DialogFooter>
             <Button

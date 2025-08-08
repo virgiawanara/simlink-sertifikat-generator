@@ -92,10 +92,10 @@ const handleMulterError = (error, req, res, next) => {
         message = "File terlalu besar. Maksimal 5MB per file.";
         break;
       case "LIMIT_FILE_COUNT":
-        message = "Terlalu banyak file. Maksimal 2 file (1 foto peserta + 1 tanda tangan).";
+        message = "Terlalu banyak file. Maksimal 1 file (foto peserta saja).";
         break;
       case "LIMIT_UNEXPECTED_FILE":
-        message = "Field file tidak dikenali. Gunakan participant_photo_url dan signature_qr_url.";
+        message = "Field file tidak dikenali. Hanya gunakan participant_photo_url.";
         break;
       case "LIMIT_PART_COUNT":
         message = "Terlalu banyak parts dalam form.";
@@ -150,7 +150,7 @@ const validateUploadedFiles = (req, res, next) => {
   }
 
   try {
-    // ✅ PERBAIKAN: Validasi foto peserta dengan field name yang benar
+    // ✅ PERBAIKAN: Validasi hanya foto peserta
     if (req.files.participant_photo_url) {
       const photoFile = req.files.participant_photo_url[0];
       const photoSizeMB = photoFile.size / (1024 * 1024);
@@ -172,27 +172,7 @@ const validateUploadedFiles = (req, res, next) => {
       }
     }
 
-    // ✅ PERBAIKAN: Validasi tanda tangan dengan field name yang benar
-    if (req.files.signature_qr_url) {
-      const signatureFile = req.files.signature_qr_url[0];
-      const signatureSizeMB = signatureFile.size / (1024 * 1024);
-
-      if (signatureSizeMB > 5) { // Ubah ke 5MB untuk konsistensi
-        return res.status(400).json({
-          success: false,
-          message: "File tanda tangan tidak boleh lebih dari 5MB",
-        });
-      }
-
-      // Validasi tipe file signature
-      const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedImageTypes.includes(signatureFile.mimetype)) {
-        return res.status(400).json({
-          success: false,
-          message: "File tanda tangan harus berformat JPEG, JPG, PNG, GIF, atau WEBP",
-        });
-      }
-    }
+    // ✅ PERBAIKAN: signature_qr_url validation dihapus
 
     next();
   } catch (error) {

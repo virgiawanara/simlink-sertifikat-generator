@@ -95,9 +95,7 @@ class CertificateController {
           if (req.files.participant_photo_url) {
             fs.unlinkSync(req.files.participant_photo_url[0].path);
           }
-          if (req.files.signature_qr_url) {
-            fs.unlinkSync(req.files.signature_qr_url[0].path);
-          }
+          // ✅ PERBAIKAN: signature_qr_url cleanup dihapus
         }
         return res.status(400).json({
           success: false,
@@ -110,23 +108,18 @@ class CertificateController {
       const expirationDate = CertificateController.calculateExpirationDate(issueDate);
 
       let participant_photo_url = null;
-      let signature_qr_url = null;
+      // ✅ PERBAIKAN: signature_qr_url dihapus - menggunakan static image
 
       // ✅ PERBAIKAN: Handle participant photo dengan nama field database
       if (req.files && req.files.participant_photo_url) {
         participant_photo_url = `/uploads/photos/${req.files.participant_photo_url[0].filename}`;
       }
 
-      // ✅ PERBAIKAN: Handle signature QR image dengan nama field database
-      if (req.files && req.files.signature_qr_url) {
-        signature_qr_url = `/uploads/signatures/${req.files.signature_qr_url[0].filename}`;
-      }
-
       // ✅ PERBAIKAN: Data menggunakan nama field database
       const certificateData = {
         ...value,
         participant_photo_url: participant_photo_url,
-        signature_qr_url: signature_qr_url,
+        // signature_qr_url dihapus - menggunakan static image
         issue_date: issueDate,
         expiration_date: expirationDate,
       };
@@ -164,9 +157,7 @@ class CertificateController {
         if (req.files.participant_photo_url) {
           fs.unlinkSync(req.files.participant_photo_url[0].path);
         }
-        if (req.files.signature_qr_url) {
-          fs.unlinkSync(req.files.signature_qr_url[0].path);
-        }
+        // ✅ PERBAIKAN: signature_qr_url cleanup dihapus
       }
       console.error("Error saat membuat sertifikat:", error.message);
       res.status(400).json({
@@ -232,12 +223,12 @@ class CertificateController {
       ctx.textAlign = "center";
       ctx.shadowColor = "rgba(0,0,0,0.16)";
       ctx.shadowBlur = 8;
-      ctx.fillText("HASIL TES PSIKOLOGI", canvasWidth / 2, 345);
+      ctx.fillText("HASIL TES PSIKOLOGI SIM", canvasWidth / 2, 345);
       ctx.restore();
 
       // ✅ PERBAIKAN: Gunakan field database
       ctx.save();
-      ctx.font = "24px Arial";
+      ctx.font = "bold 24px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "center";
       ctx.fillText(
@@ -319,7 +310,7 @@ class CertificateController {
 
       const dataX = photoX + photoWidth + 60;
       const dataYStart = photoY + 30;
-      const dataLine = 32;
+      const dataLine = 50;
 
       const participantData = [
         ["Nama Lengkap", certificate.full_name || "TIDAK TERSEDIA"],
@@ -348,7 +339,7 @@ class CertificateController {
 
       let y = dataYStart;
       participantData.forEach(([label, value]) => {
-        ctx.font = "bold 22px Arial";
+        ctx.font = "22px Arial";
         ctx.fillText(label, dataX, y);
         ctx.fillText(":", dataX + 250, y);
         ctx.fillText(value.toUpperCase(), dataX + 250 + 15, y);
@@ -356,21 +347,41 @@ class CertificateController {
       });
       ctx.restore();
 
-      // Teks "MEMENUHI SYARAT dalam mengajukan permohonan Kerja."
+      // Teks "MEMENUHI SYARAT dalam mengajukan permohonan SIM."
+      // Teks bagian 1: "MEMENUHI SYARAT" (bold)
+      const yPos = 1050;
+      const part1 = "MEMENUHI SYARAT";
+      const part2 = " dalam mengajukan permohonan SIM.";
+
+      // Ukur lebar masing-masing
+      ctx.font = "bold 23px Arial";
+      const part1Width = ctx.measureText(part1).width;
+
+      ctx.font = "23px Arial";
+      const part2Width = ctx.measureText(part2).width;
+
+      // Hitung posisi awal supaya total tetap center
+      const totalWidth = part1Width + part2Width;
+      const startX = canvasWidth / 2 - totalWidth / 2;
+
+      // Gambar bagian bold
       ctx.save();
-      ctx.font = "bold 28px Arial";
+      ctx.font = "bold 23px Arial";
       ctx.fillStyle = "#000";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        "MEMENUHI SYARAT dalam mengajukan permohonan Kerja.",
-        canvasWidth / 2,
-        1070
-      );
+      ctx.fillText(part1, startX, yPos);
       ctx.restore();
+
+      // Gambar bagian normal
+      ctx.save();
+      ctx.font = "23px Arial";
+      ctx.fillStyle = "#000";
+      ctx.fillText(part2, startX + part1Width, yPos);
+      ctx.restore();
+
 
       // ✅ PERBAIKAN: Masa Berlaku dengan field database
       ctx.save();
-      ctx.font = "24px Arial";
+      ctx.font = "bold 24px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "center";
 
@@ -389,27 +400,39 @@ class CertificateController {
           year: "numeric",
         }
       )}`;
-      ctx.fillText(expirationText, canvasWidth / 2, 1100);
+      ctx.fillText(expirationText, canvasWidth / 2, 1080);
       ctx.restore();
 
       // QR Code
-      const qrSize = 200;
-      const qrX = (canvasWidth - qrSize) / 2;
-      const qrY = canvasHeight - 470;
+      const qrSize = 150;
+      const qrPadding = 10; // jarak antara QR dan border
+      const qrX = (canvasWidth - (qrSize + qrPadding * 2)) / 2;
+      const qrY = canvasHeight - 520;
+
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       const qrCodeData = `${baseUrl}/certificate/view/${certificate.certificate_number}`;
+
       const qrCodeBuffer = await QRCode.toBuffer(qrCodeData, {
         width: qrSize,
         margin: 1,
         color: { dark: "#000", light: "#fff" },
       });
+
       const qrImage = await loadImage(qrCodeBuffer);
+
       ctx.save();
-      ctx.font = "bold 20px Arial";
-      ctx.fillStyle = "#000";
-      ctx.textAlign = "center";
-      ctx.fillText("Scan untuk Verifikasi", qrX + qrSize / 2, qrY - 15);
-      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+
+      // Gambar background/border
+      ctx.fillStyle = "#fff"; // background putih di belakang QR
+      ctx.fillRect(qrX, qrY, qrSize + qrPadding * 2, qrSize + qrPadding * 2);
+
+      ctx.lineWidth = 4; // ketebalan border
+      ctx.strokeStyle = "#000"; // warna border
+      ctx.strokeRect(qrX, qrY, qrSize + qrPadding * 2, qrSize + qrPadding * 2);
+
+      // Gambar QR code di tengah kotak
+      ctx.drawImage(qrImage, qrX + qrPadding, qrY + qrPadding, qrSize, qrSize);
+
       ctx.restore();
 
       // Tanggal pembuatan
@@ -423,32 +446,30 @@ class CertificateController {
         month: "long",
         year: "numeric",
       });
-      ctx.fillText(currentDate, canvasWidth - 270, canvasHeight - 500);
+      ctx.fillText(currentDate, canvasWidth - 220, canvasHeight - 500);
       ctx.restore();
 
-      // ✅ PERBAIKAN: Tanda tangan dengan field database
+      // ✅ PERBAIKAN: Tanda tangan menggunakan static image dari assets
+      const staticSignaturePath = path.join(__dirname, "../assets/template/QR TTD.png");
       let signatureLoaded = false;
-      if (certificate.signature_qr_url) {
+      
+      if (fs.existsSync(staticSignaturePath)) {
         try {
-          let signaturePath = certificate.signature_qr_url;
-          if (!signaturePath.startsWith("/")) signaturePath = "/" + signaturePath;
-          const absSignaturePath = path.join(__dirname, "..", signaturePath);
+          const signatureQrUrl = await loadImage(staticSignaturePath);
+          const sigWidth = 150;
+          const sigHeight = 150;
+          const sigX = canvasWidth - 290;
+          const sigY = canvasHeight - 480;
 
-          if (fs.existsSync(absSignaturePath)) {
-            const signatureQrUrl = await loadImage(absSignaturePath);
-            const sigWidth = 150;
-            const sigHeight = 150;
-            const sigX = canvasWidth - 340;
-            const sigY = canvasHeight - 480;
-
-            ctx.save();
-            ctx.drawImage(signatureQrUrl, sigX, sigY, sigWidth, sigHeight);
-            ctx.restore();
-            signatureLoaded = true;
-          }
+          ctx.save();
+          ctx.drawImage(signatureQrUrl, sigX, sigY, sigWidth, sigHeight);
+          ctx.restore();
+          signatureLoaded = true;
         } catch (e) {
-          console.error("Gagal memuat tanda tangan:", e.message);
+          console.error("Gagal memuat tanda tangan static:", e.message);
         }
+      } else {
+        console.warn("File tanda tangan static tidak ditemukan:", staticSignaturePath);
       }
 
       if (!signatureLoaded) {
@@ -463,17 +484,17 @@ class CertificateController {
 
       // Nama dan jabatan psikolog
       ctx.save();
-      ctx.font = "bold 26px Arial";
+      ctx.font = "bold 22px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "right";
       ctx.fillText(
         "(Pamila Maysari M.Psi.Psikolog)",
-        canvasWidth - 80,
+        canvasWidth - 50,
         canvasHeight - 300
       );
-      ctx.font = "semibold 26px Arial";
+      ctx.font = "semibold 22px Arial";
       ctx.fillStyle = "#000";
-      ctx.fillText("Psikolog", canvasWidth - 210, canvasHeight - 270);
+      ctx.fillText("Psikolog", canvasWidth - 180, canvasHeight - 270);
       ctx.restore();
 
       // Simpan file
@@ -535,22 +556,19 @@ class CertificateController {
       }
 
       let participant_photo_url = req.body.participant_photo_url;
-      let signature_qr_url = req.body.signature_qr_url;
+      // ✅ PERBAIKAN: signature_qr_url update dihapus
 
       // Handle participant photo update
       if (req.files && req.files.participant_photo_url) {
         participant_photo_url = `/uploads/photos/${req.files.participant_photo_url[0].filename}`;
       }
 
-      // Handle signature QR image update
-      if (req.files && req.files.signature_qr_url) {
-        signature_qr_url = `/uploads/signatures/${req.files.signature_qr_url[0].filename}`;
-      }
+      // ✅ PERBAIKAN: signature_qr_url handling dihapus
 
       const updateData = {
         ...value,
         participant_photo_url: participant_photo_url,
-        signature_qr_url: signature_qr_url,
+        // signature_qr_url dihapus
       };
 
       const updatedCertificate = await CertificateService.updateCertificate(

@@ -80,10 +80,7 @@ const createCertificateSchema = Joi.object({
     .optional()
     .allow(null, ""),
 
-  signature_qr_url: Joi.string()
-    .uri({ relativeOnly: true })
-    .optional()
-    .allow(null, ""),
+  // ✅ PERBAIKAN: signature_qr_url field dihapus - menggunakan static image
 
   certificate_file_url: Joi.string()
     .uri({ relativeOnly: true })
@@ -158,10 +155,7 @@ const updateCertificateSchema = Joi.object({
     .optional()
     .allow(null, ""),
 
-  signature_qr_url: Joi.string()
-    .uri({ relativeOnly: true })
-    .optional()
-    .allow(null, ""),
+  // ✅ PERBAIKAN: signature_qr_url field dihapus untuk update schema
 
   certificate_file_url: Joi.string()
     .uri({ relativeOnly: true })

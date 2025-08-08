@@ -301,17 +301,7 @@ class CertificateService {
         }
       }
 
-      // Hapus file tanda tangan jika ada
-      if (certificate.signature_qr_url) {
-        const signaturePath = path.join(
-          __dirname,
-          "../../",
-          certificate.signature_qr_url
-        );
-        if (fs.existsSync(signaturePath)) {
-          fs.unlinkSync(signaturePath);
-        }
-      }
+      // ✅ PERBAIKAN: Hapus cleanup signature_qr_url - tidak ada lagi
 
       await certificate.destroy();
       return { message: "Sertifikat berhasil dihapus." };
