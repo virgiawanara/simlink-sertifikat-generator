@@ -1,3 +1,4 @@
+// Certificate List Component yang diperbaiki sesuai spesifikasi database
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,32 +44,31 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 // Base URL for API from environment variables
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-// Interface for Certificate data structure
+// ✅ PERBAIKAN: Interface menggunakan nama field database
 interface CertificateData {
   id: number;
-  participantFullName: string;
-  participantNIK?: string;
+  full_name: string;
+  nik?: string;
   gender: "Laki-laki" | "Perempuan";
-  birthPlace: string;
-  birthDate: string;
+  birth_place: string;
+  birth_date: string;
   age: number;
-  certificateType: "Perpanjang" | "Buat Baru";
-  licenseClass: "A" | "B" | "C";
+  certificate_type: "Baru" | "Perpanjang";  // ✅ SESUAI SPESIFIKASI
+  license_class: "A" | "A Umum" | "B1" | "B1 Umum" | "B2" | "B2 Umum" | "C" | "C1" | "C2" | "D" | "D1";  // ✅ SESUAI SPESIFIKASI
   domicile: string;
-  participantPhotoUrl?: string;
-  certificateNumber: string;
-  issueDate: string;
-  expirationDate?: string;
-  certificateFileUrl?: string;
-  signatureQrUrl?: string;
-  issuedByUserId: number;
-  userId?: number;
+  participant_photo_url?: string;
+  certificate_number: string;
+  issue_date: string;
+  expiration_date?: string;
+  certificate_file_url?: string;
+  signature_qr_url?: string;
+  issued_by_user_id: number;
+  user_id?: number;
 }
 
 // Interface for API response
@@ -207,7 +207,7 @@ const useCertificateAPI = () => {
     []
   );
 
-  // Fungsi update disesuaikan untuk menerima FormData
+  // ✅ PERBAIKAN: Update function menggunakan FormData dengan field names yang benar
   const updateCertificateById = useCallback(
     async (certificateId: number, updatedData: FormData): Promise<string> => {
       const response = await fetch(
@@ -257,14 +257,16 @@ export default function CertificateListPage() {
   const [certificateToEdit, setCertificateToEdit] = useState<
     CertificateData | undefined
   >(undefined);
+  
+  // ✅ PERBAIKAN: State menggunakan field database
   const [updatedFormData, setUpdatedFormData] = useState<
     Partial<CertificateData>
   >({});
 
-  // State baru untuk file yang diunggah
+  // ✅ PERBAIKAN: State untuk file dengan field names yang benar
   const [updateFormFiles, setUpdateFormFiles] = useState<{
-    participantPhotoUrl?: File;
-    signatureQrUrl?: File;
+    participant_photo_url?: File;
+    signature_qr_url?: File;
   }>({});
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -432,15 +434,15 @@ export default function CertificateListPage() {
     }
   };
 
-  // Fungsi untuk membuka dialog update
+  // ✅ PERBAIKAN: Fungsi untuk membuka dialog update dengan field database
   const openUpdateDialog = (certificate: CertificateData) => {
     setCertificateToEdit(certificate);
     setUpdatedFormData({
-      participantFullName: certificate.participantFullName,
-      participantNIK: certificate.participantNIK,
+      full_name: certificate.full_name,
+      nik: certificate.nik,
       domicile: certificate.domicile,
-      certificateType: certificate.certificateType,
-      licenseClass: certificate.licenseClass,
+      certificate_type: certificate.certificate_type,
+      license_class: certificate.license_class,
     });
     setUpdateFormFiles({}); // Reset file state
     setIsUpdateDialogOpen(true);
@@ -453,28 +455,29 @@ export default function CertificateListPage() {
     try {
       const formData = new FormData();
 
-      // Tambahkan data teks ke FormData
+      // ✅ PERBAIKAN: Tambahkan data teks ke FormData dengan nama field database
       Object.keys(updatedFormData).forEach((key) => {
         const value = updatedFormData[key as keyof typeof updatedFormData];
-        if (value !== undefined) {
-          formData.append(key, value);
+        if (value !== undefined && value !== null) {
+          // Convert value to string for FormData
+          formData.append(key, String(value));
         }
       });
 
-      // Tambahkan file ke FormData jika ada
-      if (updateFormFiles.participantPhotoUrl) {
+      // ✅ PERBAIKAN: Tambahkan file ke FormData dengan field names yang benar
+      if (updateFormFiles.participant_photo_url) {
         formData.append(
-          "participantPhotoUrl",
-          updateFormFiles.participantPhotoUrl
+          "participant_photo_url",
+          updateFormFiles.participant_photo_url
         );
       }
-      if (updateFormFiles.signatureQrUrl) {
-        formData.append("signatureQrUrl", updateFormFiles.signatureQrUrl);
+      if (updateFormFiles.signature_qr_url) {
+        formData.append("signature_qr_url", updateFormFiles.signature_qr_url);
       }
 
       await updateCertificateById(certificateToEdit.id, formData);
       toast.success("Sertifikat Berhasil Diperbarui", {
-        description: `Data sertifikat untuk ${certificateToEdit.participantFullName} telah diperbarui.`,
+        description: `Data sertifikat untuk ${certificateToEdit.full_name} telah diperbarui.`,
       });
       setIsUpdateDialogOpen(false);
       setCertificateToEdit(undefined);
@@ -546,6 +549,7 @@ export default function CertificateListPage() {
                 />
               </div>
               <div className="flex flex-wrap gap-3 items-center">
+                {/* ✅ PERBAIKAN: Filter Golongan SIM dengan semua opsi sesuai database */}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">
                     Golongan SIM
@@ -557,12 +561,22 @@ export default function CertificateListPage() {
                       <SelectValue placeholder="Semua Golongan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="A">Golongan A</SelectItem>
-                      <SelectItem value="B">Golongan B</SelectItem>
-                      <SelectItem value="C">Golongan C</SelectItem>
+                      <SelectItem value="A">A</SelectItem>
+                      <SelectItem value="A Umum">A Umum</SelectItem>
+                      <SelectItem value="B1">B1</SelectItem>
+                      <SelectItem value="B1 Umum">B1 Umum</SelectItem>
+                      <SelectItem value="B2">B2</SelectItem>
+                      <SelectItem value="B2 Umum">B2 Umum</SelectItem>
+                      <SelectItem value="C">C</SelectItem>
+                      <SelectItem value="C1">C1</SelectItem>
+                      <SelectItem value="C2">C2</SelectItem>
+                      <SelectItem value="D">D</SelectItem>
+                      <SelectItem value="D1">D1</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* ✅ PERBAIKAN: Filter Jenis Sertifikat dengan nilai sesuai database */}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">
                     Jenis Sertifikat
@@ -574,11 +588,12 @@ export default function CertificateListPage() {
                       <SelectValue placeholder="Semua Jenis" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Buat Baru">Buat Baru</SelectItem>
+                      <SelectItem value="Baru">Baru</SelectItem>
                       <SelectItem value="Perpanjang">Perpanjang</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">
                     Jenis Kelamin
@@ -664,17 +679,18 @@ export default function CertificateListPage() {
                     {certificateList.length > 0 ? (
                       certificateList.map((certificateItem) => (
                         <TableRow key={certificateItem.id}>
+                          {/* ✅ PERBAIKAN: Tampilkan data dengan field database */}
                           <TableCell className="font-medium">
-                            {certificateItem.participantFullName}
+                            {certificateItem.full_name}
                           </TableCell>
                           <TableCell>
-                            {certificateItem.participantNIK || "-"}
+                            {certificateItem.nik || "-"}
                           </TableCell>
                           <TableCell>{certificateItem.gender}</TableCell>
                           <TableCell>
-                            {certificateItem.birthDate
+                            {certificateItem.birth_date
                               ? format(
-                                  new Date(certificateItem.birthDate),
+                                  new Date(certificateItem.birth_date),
                                   "dd MMMM yyyy",
                                   {
                                     locale: id,
@@ -683,9 +699,9 @@ export default function CertificateListPage() {
                               : "-"}
                           </TableCell>
                           <TableCell>
-                            {certificateItem.certificateType}
+                            {certificateItem.certificate_type}
                           </TableCell>
-                          <TableCell>{certificateItem.licenseClass}</TableCell>
+                          <TableCell>{certificateItem.license_class}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button
@@ -804,7 +820,7 @@ export default function CertificateListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Update Sertifikat */}
+      {/* ✅ PERBAIKAN: Dialog Update Sertifikat dengan field database */}
       <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -815,27 +831,30 @@ export default function CertificateListPage() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="participantFullName" className="text-left">
+              <Label htmlFor="full_name" className="text-left">
                 Nama
               </Label>
               <Input
-                id="participantFullName"
-                name="participantFullName"
-                value={updatedFormData.participantFullName || ""}
+                id="full_name"
+                name="full_name"
+                value={updatedFormData.full_name || ""}
                 onChange={handleFormChange}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="participantNIK" className="text-left">
+              <Label htmlFor="nik" className="text-left">
                 NIK
               </Label>
               <Input
-                id="participantNIK"
-                name="participantNIK"
-                value={updatedFormData.participantNIK || ""}
+                id="nik"
+                name="nik"
+                value={updatedFormData.nik || ""}
                 onChange={handleFormChange}
                 className="col-span-3"
+                maxLength={16}
+                pattern="[0-9]{16}"
+                placeholder="16 digit angka (opsional)"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -851,15 +870,15 @@ export default function CertificateListPage() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="licenseClass" className="text-left">
+              <Label htmlFor="license_class" className="text-left">
                 Golongan SIM
               </Label>
               <Select
-                value={updatedFormData.licenseClass}
+                value={updatedFormData.license_class}
                 onValueChange={(value) =>
                   setUpdatedFormData((prev) => ({
                     ...prev,
-                    licenseClass: value as "A" | "B" | "C",
+                    license_class: value as CertificateData["license_class"],
                   }))
                 }>
                 <SelectTrigger className="col-span-3">
@@ -867,56 +886,66 @@ export default function CertificateListPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="A">A</SelectItem>
-                  <SelectItem value="B">B</SelectItem>
+                  <SelectItem value="A Umum">A Umum</SelectItem>
+                  <SelectItem value="B1">B1</SelectItem>
+                  <SelectItem value="B1 Umum">B1 Umum</SelectItem>
+                  <SelectItem value="B2">B2</SelectItem>
+                  <SelectItem value="B2 Umum">B2 Umum</SelectItem>
                   <SelectItem value="C">C</SelectItem>
+                  <SelectItem value="C1">C1</SelectItem>
+                  <SelectItem value="C2">C2</SelectItem>
+                  <SelectItem value="D">D</SelectItem>
+                  <SelectItem value="D1">D1</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="certificateType" className="text-left">
+              <Label htmlFor="certificate_type" className="text-left">
                 Jenis Sertifikat
               </Label>
               <Select
-                value={updatedFormData.certificateType}
+                value={updatedFormData.certificate_type}
                 onValueChange={(value) =>
                   setUpdatedFormData((prev) => ({
                     ...prev,
-                    certificateType: value as "Perpanjang" | "Buat Baru",
+                    certificate_type: value as CertificateData["certificate_type"],
                   }))
                 }>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jenis" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Buat Baru">Buat Baru</SelectItem>
+                  <SelectItem value="Baru">Baru</SelectItem>
                   <SelectItem value="Perpanjang">Perpanjang</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {/* Input untuk mengunggah foto peserta */}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="participantPhotoUrl" className="text-left">
+              <Label htmlFor="participant_photo_url" className="text-left">
                 Foto Peserta
               </Label>
               <Input
-                id="participantPhotoUrl"
-                name="participantPhotoUrl"
+                id="participant_photo_url"
+                name="participant_photo_url"
                 type="file"
                 onChange={handleFileChange}
                 className="col-span-3"
+                accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
               />
             </div>
             {/* Input untuk mengunggah tanda tangan QR */}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="signatureQrUrl" className="text-left">
+              <Label htmlFor="signature_qr_url" className="text-left">
                 Tanda Tangan QR
               </Label>
               <Input
-                id="signatureQrUrl"
-                name="signatureQrUrl"
+                id="signature_qr_url"
+                name="signature_qr_url"
                 type="file"
                 onChange={handleFileChange}
                 className="col-span-3"
+                accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
               />
             </div>
           </div>

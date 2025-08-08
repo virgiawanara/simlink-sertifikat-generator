@@ -1,3 +1,4 @@
+// controllers/certificateController.js - Controller yang diperbaiki sesuai spesifikasi database
 const CertificateService = require("../services/certificateService");
 const PDFDocument = require("pdfkit");
 const {
@@ -86,15 +87,16 @@ class CertificateController {
       console.log("req.files:", req.files);
       console.log("req.body:", req.body);
 
+      // ✅ PERBAIKAN: Validasi menggunakan schema dengan nama field database
       const { error, value } = createCertificateSchema.validate(req.body);
       if (error) {
         // Clean up uploaded files if validation fails
         if (req.files) {
-          if (req.files.participantPhotoUrl) {
-            fs.unlinkSync(req.files.participantPhotoUrl[0].path);
+          if (req.files.participant_photo_url) {
+            fs.unlinkSync(req.files.participant_photo_url[0].path);
           }
-          if (req.files.signatureQrUrl) {
-            fs.unlinkSync(req.files.signatureQrUrl[0].path);
+          if (req.files.signature_qr_url) {
+            fs.unlinkSync(req.files.signature_qr_url[0].path);
           }
         }
         return res.status(400).json({
@@ -105,28 +107,28 @@ class CertificateController {
 
       const issuedByUserId = req.user.id;
       const issueDate = new Date();
-      const expirationDate =
-        CertificateController.calculateExpirationDate(issueDate);
+      const expirationDate = CertificateController.calculateExpirationDate(issueDate);
 
-      let participantPhotoUrl = null;
-      let signatureQrUrl = null;
+      let participant_photo_url = null;
+      let signature_qr_url = null;
 
-      // Handle participant photo
-      if (req.files && req.files.participantPhotoUrl) {
-        participantPhotoUrl = `/uploads/photos/${req.files.participantPhotoUrl[0].filename}`;
+      // ✅ PERBAIKAN: Handle participant photo dengan nama field database
+      if (req.files && req.files.participant_photo_url) {
+        participant_photo_url = `/uploads/photos/${req.files.participant_photo_url[0].filename}`;
       }
 
-      // Handle signature QR image
-      if (req.files && req.files.signatureQrUrl) {
-        signatureQrUrl = `/uploads/signatures/${req.files.signatureQrUrl[0].filename}`;
+      // ✅ PERBAIKAN: Handle signature QR image dengan nama field database
+      if (req.files && req.files.signature_qr_url) {
+        signature_qr_url = `/uploads/signatures/${req.files.signature_qr_url[0].filename}`;
       }
 
+      // ✅ PERBAIKAN: Data menggunakan nama field database
       const certificateData = {
         ...value,
-        participantPhotoUrl: participantPhotoUrl,
-        signatureQrUrl: signatureQrUrl,
-        issueDate,
-        expirationDate,
+        participant_photo_url: participant_photo_url,
+        signature_qr_url: signature_qr_url,
+        issue_date: issueDate,
+        expiration_date: expirationDate,
       };
 
       const certificate = await CertificateService.createCertificate(
@@ -159,11 +161,11 @@ class CertificateController {
     } catch (error) {
       // Clean up uploaded files if error occurs
       if (req.files) {
-        if (req.files.participantPhotoUrl) {
-          fs.unlinkSync(req.files.participantPhotoUrl[0].path);
+        if (req.files.participant_photo_url) {
+          fs.unlinkSync(req.files.participant_photo_url[0].path);
         }
-        if (req.files.signatureQrUrl) {
-          fs.unlinkSync(req.files.signatureQrUrl[0].path);
+        if (req.files.signature_qr_url) {
+          fs.unlinkSync(req.files.signature_qr_url[0].path);
         }
       }
       console.error("Error saat membuat sertifikat:", error.message);
@@ -174,7 +176,7 @@ class CertificateController {
     }
   }
 
-  // UPDATE METHOD generateCertificate - BAGIAN QR CODE
+  // ✅ PERBAIKAN: Method generateCertificate dengan field database
   static async generateCertificate(req, res) {
     try {
       const certificateId = req.params.id;
@@ -233,13 +235,13 @@ class CertificateController {
       ctx.fillText("HASIL TES PSIKOLOGI", canvasWidth / 2, 345);
       ctx.restore();
 
-      // Nomor Sertifikat
+      // ✅ PERBAIKAN: Gunakan field database
       ctx.save();
       ctx.font = "24px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "center";
       ctx.fillText(
-        `No Sertifikat : ${certificate.certificateNumber || "N/A"}`,
+        `No Sertifikat : ${certificate.certificate_number || "N/A"}`,
         canvasWidth / 2,
         385
       );
@@ -260,11 +262,11 @@ class CertificateController {
       ctx.fillText("Sertifikat ini diberikan kepada:", photoX, 450);
       ctx.restore();
 
-      // Load and display participant photo
+      // ✅ PERBAIKAN: Load participant photo dengan field database
       let photoLoaded = false;
-      if (certificate.participantPhotoUrl) {
+      if (certificate.participant_photo_url) {
         try {
-          let photoPath = certificate.participantPhotoUrl;
+          let photoPath = certificate.participant_photo_url;
           if (!photoPath.startsWith("/")) photoPath = "/" + photoPath;
           const absPhotoPath = path.join(__dirname, "..", photoPath);
 
@@ -303,25 +305,13 @@ class CertificateController {
         ctx.font = "bold 20px Arial";
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
-        ctx.fillText(
-          "FOTO",
-          photoX + photoWidth / 2,
-          photoY + photoHeight / 2 - 20
-        );
-        ctx.fillText(
-          "TIDAK",
-          photoX + photoWidth / 2,
-          photoY + photoHeight / 2
-        );
-        ctx.fillText(
-          "TERSEDIA",
-          photoX + photoWidth / 2,
-          photoY + photoHeight / 2 + 20
-        );
+        ctx.fillText("FOTO", photoX + photoWidth / 2, photoY + photoHeight / 2 - 20);
+        ctx.fillText("TIDAK", photoX + photoWidth / 2, photoY + photoHeight / 2);
+        ctx.fillText("TERSEDIA", photoX + photoWidth / 2, photoY + photoHeight / 2 + 20);
         ctx.restore();
       }
 
-      // Data Peserta
+      // ✅ PERBAIKAN: Data Peserta dengan field database
       ctx.save();
       ctx.font = "22px Arial";
       ctx.fillStyle = "#000";
@@ -332,14 +322,14 @@ class CertificateController {
       const dataLine = 32;
 
       const participantData = [
-        ["Nama Lengkap", certificate.participantFullName || "TIDAK TERSEDIA"],
-        ["NIK", certificate.participantNIK || "TIDAK TERSEDIA"],
+        ["Nama Lengkap", certificate.full_name || "TIDAK TERSEDIA"],
+        ["NIK", certificate.nik || "TIDAK TERSEDIA"],
         ["Jenis kelamin", certificate.gender || "TIDAK TERSEDIA"],
         [
           "Tempat, Tanggal Lahir",
-          certificate.birthPlace && certificate.birthDate
-            ? `${certificate.birthPlace}, ${new Date(
-                certificate.birthDate
+          certificate.birth_place && certificate.birth_date
+            ? `${certificate.birth_place}, ${new Date(
+                certificate.birth_date
               ).toLocaleDateString("id-ID", {
                 day: "2-digit",
                 month: "long",
@@ -351,8 +341,8 @@ class CertificateController {
           "Usia",
           certificate.age ? `${certificate.age} TAHUN` : "TIDAK TERSEDIA",
         ],
-        ["Jenis SIM", certificate.certificateType || "TIDAK TERSEDIA"],
-        ["Golongan SIM", certificate.licenseClass || "TIDAK TERSEDIA"],
+        ["Jenis SIM", certificate.certificate_type || "TIDAK TERSEDIA"],
+        ["Golongan SIM", certificate.license_class || "TIDAK TERSEDIA"],
         ["Domisili", certificate.domicile || "TIDAK TERSEDIA"],
       ];
 
@@ -378,17 +368,18 @@ class CertificateController {
       );
       ctx.restore();
 
-      // Masa Berlaku - Updated to use issue date and calculate 6 months later
+      // ✅ PERBAIKAN: Masa Berlaku dengan field database
       ctx.save();
       ctx.font = "24px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "center";
 
-      const issueDate = certificate.issueDate
-        ? new Date(certificate.issueDate)
+      const issueDate = certificate.issue_date
+        ? new Date(certificate.issue_date)
         : new Date();
-      const expirationDate =
-        CertificateController.calculateExpirationDate(issueDate);
+      const expirationDate = certificate.expiration_date 
+        ? new Date(certificate.expiration_date)
+        : CertificateController.calculateExpirationDate(issueDate);
 
       const expirationText = `Sertifikat ini berlaku sampai dengan ${expirationDate.toLocaleDateString(
         "id-ID",
@@ -405,8 +396,8 @@ class CertificateController {
       const qrSize = 200;
       const qrX = (canvasWidth - qrSize) / 2;
       const qrY = canvasHeight - 470;
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173"; // URL frontend
-      const qrCodeData = `${baseUrl}/certificate/view/${certificate.certificateNumber}`;
+      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const qrCodeData = `${baseUrl}/certificate/view/${certificate.certificate_number}`;
       const qrCodeBuffer = await QRCode.toBuffer(qrCodeData, {
         width: qrSize,
         margin: 1,
@@ -435,13 +426,12 @@ class CertificateController {
       ctx.fillText(currentDate, canvasWidth - 270, canvasHeight - 500);
       ctx.restore();
 
-      // Tanda tangan psikolog - Use uploaded signature QR image
+      // ✅ PERBAIKAN: Tanda tangan dengan field database
       let signatureLoaded = false;
-      if (certificate.signatureQrUrl) {
+      if (certificate.signature_qr_url) {
         try {
-          let signaturePath = certificate.signatureQrUrl;
-          if (!signaturePath.startsWith("/"))
-            signaturePath = "/" + signaturePath;
+          let signaturePath = certificate.signature_qr_url;
+          if (!signaturePath.startsWith("/")) signaturePath = "/" + signaturePath;
           const absSignaturePath = path.join(__dirname, "..", signaturePath);
 
           if (fs.existsSync(absSignaturePath)) {
@@ -492,8 +482,9 @@ class CertificateController {
       const buffer = canvas.toBuffer("image/png");
       fs.writeFileSync(filePath, buffer);
 
+      // ✅ PERBAIKAN: Update dengan field database
       await CertificateService.updateCertificate(certificate.id, {
-        certificateFileUrl: `/uploads/certificates/${fileName}`,
+        certificate_file_url: `/uploads/certificates/${fileName}`,
       });
 
       res.json({
@@ -503,8 +494,8 @@ class CertificateController {
           certificateUrl: `/uploads/certificates/${fileName}`,
           certificateId: certificate.id,
           fileName: fileName,
-          qrCodeUrl: qrCodeData, // Tambahkan ini untuk debugging
-          expirationDate: CertificateController.calculateExpirationDate(certificate.issueDate || new Date()),
+          qrCodeUrl: qrCodeData,
+          expirationDate: CertificateController.calculateExpirationDate(certificate.issue_date || new Date()),
           generatedBy: {
             id: req.user.id,
             email: req.user.email,
@@ -522,7 +513,7 @@ class CertificateController {
     }
   }
 
-  // Memperbarui sertifikat berdasarkan ID
+  // ✅ PERBAIKAN: Method update dengan field database
   static async updateCertificate(req, res) {
     try {
       const { id } = req.params;
@@ -530,11 +521,11 @@ class CertificateController {
       if (error) {
         // Clean up uploaded files if validation fails
         if (req.files) {
-          if (req.files.participantPhotoUrl) {
-            fs.unlinkSync(req.files.participantPhotoUrl[0].path);
+          if (req.files.participant_photo_url) {
+            fs.unlinkSync(req.files.participant_photo_url[0].path);
           }
-          if (req.files.signatureQrUrl) {
-            fs.unlinkSync(req.files.signatureQrUrl[0].path);
+          if (req.files.signature_qr_url) {
+            fs.unlinkSync(req.files.signature_qr_url[0].path);
           }
         }
         return res.status(400).json({
@@ -543,23 +534,23 @@ class CertificateController {
         });
       }
 
-      let participantPhotoUrl = req.body.participantPhotoUrl;
-      let signatureQrUrl = req.body.signatureQrUrl;
+      let participant_photo_url = req.body.participant_photo_url;
+      let signature_qr_url = req.body.signature_qr_url;
 
       // Handle participant photo update
-      if (req.files && req.files.participantPhotoUrl) {
-        participantPhotoUrl = `/uploads/photos/${req.files.participantPhotoUrl[0].filename}`;
+      if (req.files && req.files.participant_photo_url) {
+        participant_photo_url = `/uploads/photos/${req.files.participant_photo_url[0].filename}`;
       }
 
       // Handle signature QR image update
-      if (req.files && req.files.signatureQrUrl) {
-        signatureQrUrl = `/uploads/signatures/${req.files.signatureQrUrl[0].filename}`;
+      if (req.files && req.files.signature_qr_url) {
+        signature_qr_url = `/uploads/signatures/${req.files.signature_qr_url[0].filename}`;
       }
 
       const updateData = {
         ...value,
-        participantPhotoUrl: participantPhotoUrl,
-        signatureQrUrl: signatureQrUrl,
+        participant_photo_url: participant_photo_url,
+        signature_qr_url: signature_qr_url,
       };
 
       const updatedCertificate = await CertificateService.updateCertificate(
@@ -582,11 +573,11 @@ class CertificateController {
     } catch (error) {
       // Clean up uploaded files if error occurs
       if (req.files) {
-        if (req.files.participantPhotoUrl) {
-          fs.unlinkSync(req.files.participantPhotoUrl[0].path);
+        if (req.files.participant_photo_url) {
+          fs.unlinkSync(req.files.participant_photo_url[0].path);
         }
-        if (req.files.signatureQrUrl) {
-          fs.unlinkSync(req.files.signatureQrUrl[0].path);
+        if (req.files.signature_qr_url) {
+          fs.unlinkSync(req.files.signature_qr_url[0].path);
         }
       }
       console.error("Error saat memperbarui sertifikat:", error.message);
@@ -597,7 +588,7 @@ class CertificateController {
     }
   }
 
-  // Menghapus sertifikat berdasarkan ID
+  // Method lainnya tetap sama seperti sebelumnya
   static async deleteCertificate(req, res) {
     try {
       const { id } = req.params;
@@ -627,19 +618,14 @@ class CertificateController {
       const { id } = req.params;
       const certificate = await CertificateService.getCertificateById(id);
 
-      if (!certificate.certificateFileUrl) {
+      if (!certificate.certificate_file_url) {
         return res.status(404).json({
           success: false,
-          message:
-            "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
+          message: "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
         });
       }
 
-      const filePath = path.join(
-        __dirname,
-        "..",
-        certificate.certificateFileUrl
-      );
+      const filePath = path.join(__dirname, "..", certificate.certificate_file_url);
       console.log("File path yang dicek:", filePath);
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({
@@ -649,17 +635,14 @@ class CertificateController {
       }
 
       // Konversi PNG ke PDF dan kirim ke client
-      const fileName = `certificate-${certificate.certificateNumber}.pdf`;
-      res.setHeader(
-        "Content-disposition",
-        `attachment; filename="${fileName}"`
-      );
+      const fileName = `certificate-${certificate.certificate_number}.pdf`;
+      res.setHeader("Content-disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
-      const doc = new PDFDocument({
-        autoFirstPage: false,
-      });
+      const doc = new PDFDocument({ autoFirstPage: false });
+      
       // Pipe PDF stream ke response
       doc.pipe(res);
+      
       // Dapatkan ukuran gambar PNG
       const sizeOf = require("image-size");
       let imageDimensions;
@@ -669,6 +652,7 @@ class CertificateController {
         // fallback default A4
         imageDimensions = { width: 595, height: 842, type: "png" };
       }
+      
       // Buat halaman PDF dengan ukuran gambar
       doc.addPage({
         size: [imageDimensions.width, imageDimensions.height],
@@ -701,13 +685,24 @@ class CertificateController {
         limit = 10,
       } = req.query;
 
-      // Validasi golongan SIM jika ada
+      // ✅ PERBAIKAN: Validasi golongan SIM sesuai database
       if (licenseClass) {
-        const validClasses = ["A", "B", "C"];
-        if (!validClasses.includes(licenseClass.toUpperCase())) {
+        const validClasses = ["A", "A Umum", "B1", "B1 Umum", "B2", "B2 Umum", "C", "C1", "C2", "D", "D1"];
+        if (!validClasses.includes(licenseClass)) {
           return res.status(400).json({
             success: false,
-            message: "Golongan SIM harus berupa A, B, atau C",
+            message: "Golongan SIM tidak valid",
+          });
+        }
+      }
+
+      // ✅ PERBAIKAN: Validasi certificate type sesuai database
+      if (certificateType) {
+        const validTypes = ["Baru", "Perpanjang"];
+        if (!validTypes.includes(certificateType)) {
+          return res.status(400).json({
+            success: false,
+            message: "Jenis sertifikat harus berupa 'Baru' atau 'Perpanjang'",
           });
         }
       }
@@ -722,7 +717,7 @@ class CertificateController {
 
       // Filter golongan SIM
       if (licenseClass && licenseClass.trim() !== "") {
-        filters.licenseClass = licenseClass.toUpperCase();
+        filters.licenseClass = licenseClass;
       }
 
       // Filter jenis sertifikat
@@ -785,14 +780,14 @@ class CertificateController {
         message: "Sertifikat ditemukan",
         data: {
           id: certificate.id,
-          participantFullName: certificate.participantFullName,
-          certificateNumber: certificate.certificateNumber,
-          licenseClass: certificate.licenseClass,
-          certificateType: certificate.certificateType,
-          issueDate: certificate.issueDate,
-          expirationDate: certificate.expirationDate,
-          certificateFileUrl: certificate.certificateFileUrl,
-          isValid: new Date() < new Date(certificate.expirationDate)
+          full_name: certificate.full_name,
+          certificate_number: certificate.certificate_number,
+          license_class: certificate.license_class,
+          certificate_type: certificate.certificate_type,
+          issue_date: certificate.issue_date,
+          expiration_date: certificate.expiration_date,
+          certificate_file_url: certificate.certificate_file_url,
+          isValid: new Date() < new Date(certificate.expiration_date)
         }
       });
     } catch (error) {
@@ -815,14 +810,14 @@ class CertificateController {
         message: "Sertifikat ditemukan",
         data: {
           id: certificate.id,
-          participantFullName: certificate.participantFullName,
-          certificateNumber: certificate.certificateNumber,
-          licenseClass: certificate.licenseClass,
-          certificateType: certificate.certificateType,
-          issueDate: certificate.issueDate,
-          expirationDate: certificate.expirationDate,
-          certificateFileUrl: certificate.certificateFileUrl,
-          isValid: new Date() < new Date(certificate.expirationDate)
+          full_name: certificate.full_name,
+          certificate_number: certificate.certificate_number,
+          license_class: certificate.license_class,
+          certificate_type: certificate.certificate_type,
+          issue_date: certificate.issue_date,
+          expiration_date: certificate.expiration_date,
+          certificate_file_url: certificate.certificate_file_url,
+          isValid: new Date() < new Date(certificate.expiration_date)
         }
       });
     } catch (error) {
@@ -842,14 +837,14 @@ class CertificateController {
       const { certificateNumber } = req.params;
       const certificate = await CertificateService.getCertificateByCertificateNumber(certificateNumber);
   
-      if (!certificate.certificateFileUrl) {
+      if (!certificate.certificate_file_url) {
         return res.status(404).json({
           success: false,
           message: "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
         });
       }
   
-      const filePath = path.join(__dirname, "..", certificate.certificateFileUrl);
+      const filePath = path.join(__dirname, "..", certificate.certificate_file_url);
       console.log("File path:", filePath);
       
       if (!fs.existsSync(filePath)) {
@@ -866,7 +861,7 @@ class CertificateController {
       res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
       
       // Konversi PNG ke PDF dan kirim ke client
-      const fileName = `certificate-${certificate.certificateNumber}.pdf`;
+      const fileName = `certificate-${certificate.certificate_number}.pdf`;
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
       
@@ -934,14 +929,14 @@ class CertificateController {
       const { id } = req.params;
       const certificate = await CertificateService.getCertificateById(id);
   
-      if (!certificate.certificateFileUrl) {
+      if (!certificate.certificate_file_url) {
         return res.status(404).json({
           success: false,
           message: "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
         });
       }
   
-      const filePath = path.join(__dirname, "..", certificate.certificateFileUrl);
+      const filePath = path.join(__dirname, "..", certificate.certificate_file_url);
       console.log("File path:", filePath);
       
       if (!fs.existsSync(filePath)) {
@@ -958,7 +953,7 @@ class CertificateController {
       res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
       
       // Konversi PNG ke PDF dan kirim ke client
-      const fileName = `certificate-${certificate.certificateNumber}.pdf`;
+      const fileName = `certificate-${certificate.certificate_number}.pdf`;
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
       

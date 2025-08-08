@@ -1,9 +1,8 @@
-// services/certificateService.js
-const { Certificate, User } = require("../models"); // Mengimpor model Certificate dan User
-const { Op } = require("sequelize"); // Untuk operator Sequelize seperti LIKE
-const path = require("path"); // Impor path untuk menghapus file
-const fs = require("fs"); // Impor fs untuk menghapus file
-const { sequelize } = require("../models"); // Impor sequelize instance untuk fungsi agregasi
+// services/certificateService.js - Service yang diperbaiki sesuai spesifikasi database
+const { Certificate, User } = require("../models");
+const { Op } = require("sequelize");
+const path = require("path");
+const fs = require("fs");
 
 class CertificateService {
   // Generate nomor sertifikat dengan format baru
@@ -27,29 +26,29 @@ class CertificateService {
       const whereClause = {};
       const andConditions = [];
 
-      // Filter pencarian untuk nama dan NIK
+      // Filter pencarian untuk nama dan NIK (gunakan field database)
       if (filters.search && filters.search.trim() !== "") {
         andConditions.push({
           [Op.or]: [
             {
-              participantFullName: { [Op.like]: `%${filters.search.trim()}%` },
+              full_name: { [Op.iLike]: `%${filters.search.trim()}%` },
             },
-            { participantNIK: { [Op.like]: `%${filters.search.trim()}%` } },
+            { nik: { [Op.iLike]: `%${filters.search.trim()}%` } },
           ],
         });
       }
 
-      // Filter berdasarkan golongan SIM (A, B, C)
+      // ✅ Filter berdasarkan golongan SIM (gunakan field dan nilai database)
       if (filters.licenseClass && filters.licenseClass.trim() !== "") {
         andConditions.push({
-          licenseClass: filters.licenseClass.trim().toUpperCase(),
+          license_class: filters.licenseClass.trim(),
         });
       }
 
-      // Filter berdasarkan jenis sertifikat
+      // ✅ Filter berdasarkan jenis sertifikat (gunakan field dan nilai database)
       if (filters.certificateType && filters.certificateType.trim() !== "") {
         andConditions.push({
-          certificateType: filters.certificateType.trim(),
+          certificate_type: filters.certificateType.trim(),
         });
       }
 
@@ -69,12 +68,12 @@ class CertificateService {
         where: whereClause,
         limit,
         offset,
-        order: [["createdAt", "DESC"]], // Urutkan berdasarkan tanggal pembuatan terbaru
+        order: [["created_at", "DESC"]],
         include: [
           {
             model: User,
             as: "issuer",
-            attributes: ["id", "email", "role"], // Hanya ambil id, email, role dari user
+            attributes: ["id", "email", "role"],
           },
         ],
       });
@@ -120,43 +119,52 @@ class CertificateService {
   // Membuat sertifikat baru
   static async createCertificate(certificateData, userId) {
     try {
+      // ✅ PERBAIKAN: Data sudah dalam format database field names
+      const transformedData = { ...certificateData };
+
       // Generate nomor sertifikat otomatis jika tidak disediakan
-      if (!certificateData.certificateNumber) {
-        certificateData.certificateNumber = this.generateCertificateNumber();
+      if (!transformedData.certificate_number) {
+        transformedData.certificate_number = this.generateCertificateNumber();
       }
 
       // Periksa apakah nomor sertifikat sudah ada
       const existingCertificate = await Certificate.findOne({
-        where: { certificateNumber: certificateData.certificateNumber },
+        where: { certificate_number: transformedData.certificate_number },
       });
       if (existingCertificate) {
         // Jika sudah ada, generate ulang
-        certificateData.certificateNumber = this.generateCertificateNumber();
+        transformedData.certificate_number = this.generateCertificateNumber();
       }
 
-      // Periksa apakah NIK peserta sudah ada (jika NIK disediakan)
-      if (
-        certificateData.participantNIK &&
-        certificateData.participantNIK !== ""
-      ) {
-        // Pastikan NIK tidak kosong
+      // ✅ PERBAIKAN: Periksa NIK hanya jika tidak null/empty
+      if (transformedData.nik && transformedData.nik.trim() !== "") {
         const existingNIK = await Certificate.findOne({
-          where: { participantNIK: certificateData.participantNIK },
+          where: { nik: transformedData.nik },
         });
         if (existingNIK) {
           throw new Error("NIK peserta sudah terdaftar dalam sertifikat lain.");
         }
+      } else {
+        // Set NIK ke null jika kosong
+        transformedData.nik = null;
       }
 
       // Set tanggal pembuatan jika tidak ada
-      if (!certificateData.issueDate) {
-        certificateData.issueDate = new Date();
+      if (!transformedData.issue_date) {
+        transformedData.issue_date = new Date();
+      }
+
+      // ✅ PERBAIKAN: Set expiration date (6 bulan dari issue date)
+      if (!transformedData.expiration_date) {
+        const expDate = new Date(transformedData.issue_date);
+        expDate.setMonth(expDate.getMonth() + 6);
+        transformedData.expiration_date = expDate;
       }
 
       // Tambahkan issuedByUserId dari pengguna yang sedang login (admin)
       const certificate = await Certificate.create({
-        ...certificateData,
-        issuedByUserId: userId,
+        ...transformedData,
+        issued_by_user_id: userId,
       });
 
       // Return certificate dengan data issuer
@@ -185,15 +193,18 @@ class CertificateService {
         throw new Error("Sertifikat tidak ditemukan.");
       }
 
+      // ✅ PERBAIKAN: Data sudah dalam format database field names
+      const transformedData = { ...updateData };
+
       // Jika nomor sertifikat diupdate, periksa apakah sudah ada yang lain
       if (
-        updateData.certificateNumber &&
-        updateData.certificateNumber !== certificate.certificateNumber
+        transformedData.certificate_number &&
+        transformedData.certificate_number !== certificate.certificate_number
       ) {
         const existingCertificate = await Certificate.findOne({
           where: {
-            certificateNumber: updateData.certificateNumber,
-            id: { [Op.ne]: id }, // Exclude current certificate
+            certificate_number: transformedData.certificate_number,
+            id: { [Op.ne]: id },
           },
         });
         if (existingCertificate) {
@@ -201,26 +212,27 @@ class CertificateService {
         }
       }
 
-      // Jika NIK peserta diupdate, periksa apakah sudah ada yang lain
-      if (
-        updateData.participantNIK &&
-        updateData.participantNIK !== certificate.participantNIK &&
-        updateData.participantNIK !== "" // Pastikan NIK tidak kosong
-      ) {
-        const existingNIK = await Certificate.findOne({
-          where: {
-            participantNIK: updateData.participantNIK,
-            id: { [Op.ne]: id }, // Exclude current certificate
-          },
-        });
-        if (existingNIK) {
-          throw new Error(
-            "NIK peserta yang baru sudah terdaftar pada sertifikat lain."
-          );
+      // ✅ PERBAIKAN: Periksa NIK hanya jika ada dan tidak kosong
+      if (transformedData.nik !== undefined && transformedData.nik !== certificate.nik) {
+        if (transformedData.nik && transformedData.nik.trim() !== "") {
+          const existingNIK = await Certificate.findOne({
+            where: {
+              nik: transformedData.nik,
+              id: { [Op.ne]: id },
+            },
+          });
+          if (existingNIK) {
+            throw new Error(
+              "NIK peserta yang baru sudah terdaftar pada sertifikat lain."
+            );
+          }
+        } else {
+          // Set NIK ke null jika kosong
+          transformedData.nik = null;
         }
       }
 
-      await certificate.update(updateData);
+      await certificate.update(transformedData);
 
       // Return updated certificate dengan data issuer
       const updatedCertificate = await Certificate.findByPk(id, {
@@ -249,11 +261,11 @@ class CertificateService {
       }
 
       // Hapus file sertifikat jika ada
-      if (certificate.certificateFileUrl) {
+      if (certificate.certificate_file_url) {
         const filePath = path.join(
           __dirname,
           "../../",
-          certificate.certificateFileUrl
+          certificate.certificate_file_url
         );
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
@@ -261,11 +273,11 @@ class CertificateService {
       }
 
       // Hapus file foto peserta jika ada
-      if (certificate.participantPhotoUrl) {
+      if (certificate.participant_photo_url) {
         const photoPath = path.join(
           __dirname,
           "../../",
-          certificate.participantPhotoUrl
+          certificate.participant_photo_url
         );
         if (fs.existsSync(photoPath)) {
           fs.unlinkSync(photoPath);
@@ -273,11 +285,11 @@ class CertificateService {
       }
 
       // Hapus file tanda tangan jika ada
-      if (certificate.signatureQrUrl) {
+      if (certificate.signature_qr_url) {
         const signaturePath = path.join(
           __dirname,
           "../../",
-          certificate.signatureQrUrl
+          certificate.signature_qr_url
         );
         if (fs.existsSync(signaturePath)) {
           fs.unlinkSync(signaturePath);
@@ -295,12 +307,12 @@ class CertificateService {
   static async getCertificateByCertificateNumber(certificateNumber) {
     try {
       const certificate = await Certificate.findOne({
-        where: { certificateNumber: certificateNumber },
+        where: { certificate_number: certificateNumber },
         include: [
           {
             model: User,
             as: "issuer",
-            attributes: ["id", "email", "role"], // ✅ HANYA kolom yang ada
+            attributes: ["id", "email", "role"],
           },
         ],
       });

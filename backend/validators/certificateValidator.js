@@ -1,35 +1,35 @@
-// validators/certificateValidator.js
+// validators/certificateValidator.js - Validator yang diperbaiki sesuai spesifikasi database
 const Joi = require("joi");
 
-// Schema untuk validasi pembuatan sertifikat baru
+// ✅ SESUAI SPESIFIKASI: gunakan nama field database dan nilai yang benar
 const createCertificateSchema = Joi.object({
-  participantFullName: Joi.string().min(2).max(100).required().messages({
+  // Gunakan nama field sesuai database (snake_case)
+  full_name: Joi.string().min(2).max(100).required().messages({
     "string.min": "Nama lengkap minimal 2 karakter",
     "string.max": "Nama lengkap maksimal 100 karakter",
     "any.required": "Nama lengkap wajib diisi",
   }),
 
-  participantNIK: Joi.string()
+  nik: Joi.string()
     .pattern(/^\d{16}$/)
-    .required()
+    .optional()
+    .allow('', null)
     .messages({
       "string.pattern.base": "NIK harus berupa 16 digit angka",
-      "any.required": "NIK wajib diisi",
     }),
 
-  // PERBAIKAN: Sesuaikan dengan model dan postman
   gender: Joi.string().valid("Laki-laki", "Perempuan").required().messages({
     "any.only": "Jenis kelamin harus Laki-laki atau Perempuan",
     "any.required": "Jenis kelamin wajib diisi",
   }),
 
-  birthPlace: Joi.string().min(2).max(50).required().messages({
+  birth_place: Joi.string().min(2).max(50).required().messages({
     "string.min": "Tempat lahir minimal 2 karakter",
     "string.max": "Tempat lahir maksimal 50 karakter",
     "any.required": "Tempat lahir wajib diisi",
   }),
 
-  birthDate: Joi.date().max("now").required().messages({
+  birth_date: Joi.date().max("now").required().messages({
     "date.max": "Tanggal lahir tidak boleh di masa depan",
     "any.required": "Tanggal lahir wajib diisi",
   }),
@@ -40,70 +40,71 @@ const createCertificateSchema = Joi.object({
     "any.required": "Usia wajib diisi",
   }),
 
-  // PERBAIKAN: Sesuaikan dengan model
-  certificateType: Joi.string()
-    .valid("Buat Baru", "Perpanjang")
+  // ✅ SESUAI SPESIFIKASI: gunakan 'Baru' dan 'Perpanjang'
+  certificate_type: Joi.string()
+    .valid("Baru", "Perpanjang")
     .required()
     .messages({
-      "any.only": "Jenis sertifikat harus berupa Buat Baru atau Perpanjang",
+      "any.only": "Jenis sertifikat harus berupa 'Baru' atau 'Perpanjang'",
       "any.required": "Jenis sertifikat wajib diisi",
     }),
 
-  // PERBAIKAN: Sesuaikan dengan model (tambah D)
-  licenseClass: Joi.string().valid("A", "B", "C").required().messages({
-    "any.only": "Golongan SIM harus berupa A, B atau C",
-    "any.required": "Golongan SIM wajib diisi",
-  }),
+  // ✅ SESUAI SPESIFIKASI: gunakan semua license class yang ada di database
+  license_class: Joi.string()
+    .valid("A", "A Umum", "B1", "B1 Umum", "B2", "B2 Umum", "C", "C1", "C2", "D", "D1")
+    .required()
+    .messages({
+      "any.only": "Golongan SIM harus berupa A, A Umum, B1, B1 Umum, B2, B2 Umum, C, C1, C2, D, atau D1",
+      "any.required": "Golongan SIM wajib diisi",
+    }),
 
-  domicile: Joi.string().min(5).max(100).required().messages({
+  domicile: Joi.string().min(5).max(200).required().messages({
     "string.min": "Domisili minimal 5 karakter",
-    "string.max": "Domisili maksimal 100 karakter",
+    "string.max": "Domisili maksimal 200 karakter",
     "any.required": "Domisili wajib diisi",
   }),
 
-  // Tanggal penerbitan (opsional, akan diset otomatis jika tidak ada)
-  issueDate: Joi.date().max("now").optional().messages({
+  // Field tanggal (gunakan nama database)
+  issue_date: Joi.date().max("now").optional().messages({
     "date.max": "Tanggal penerbitan tidak boleh di masa depan",
   }),
 
-  // PERBAIKAN: Tambahkan field opsional yang mungkin ada
-  expirationDate: Joi.date().min(Joi.ref("issueDate")).optional().messages({
+  expiration_date: Joi.date().min(Joi.ref("issue_date")).optional().messages({
     "date.min": "Tanggal kadaluarsa harus setelah tanggal penerbitan",
   }),
 
-  // URL foto dan tanda tangan (akan diset oleh controller)
-  participantPhotoUrl: Joi.string()
+  // URL foto dan tanda tangan (gunakan nama database)
+  participant_photo_url: Joi.string()
     .uri({ relativeOnly: true })
     .optional()
     .allow(null, ""),
 
-  signatureQrUrl: Joi.string()
+  signature_qr_url: Joi.string()
     .uri({ relativeOnly: true })
     .optional()
     .allow(null, ""),
 
-  // File URL sertifikat (akan diset saat generate)
-  certificateFileUrl: Joi.string()
+  certificate_file_url: Joi.string()
     .uri({ relativeOnly: true })
     .optional()
     .allow(null, ""),
 
-  // Nomor sertifikat (opsional, akan digenerate otomatis)
-  certificateNumber: Joi.string().max(50).optional().messages({
+  certificate_number: Joi.string().max(50).optional().messages({
     "string.max": "Nomor sertifikat maksimal 50 karakter",
   }),
 });
 
 // Schema untuk validasi update sertifikat
 const updateCertificateSchema = Joi.object({
-  participantFullName: Joi.string().min(2).max(100).optional().messages({
+  full_name: Joi.string().min(2).max(100).optional().messages({
     "string.min": "Nama lengkap minimal 2 karakter",
     "string.max": "Nama lengkap maksimal 100 karakter",
   }),
 
-  participantNIK: Joi.string()
+  nik: Joi.string()
     .pattern(/^\d{16}$/)
     .optional()
+    .allow('', null)
     .messages({
       "string.pattern.base": "NIK harus berupa 16 digit angka",
     }),
@@ -112,12 +113,12 @@ const updateCertificateSchema = Joi.object({
     "any.only": "Jenis kelamin harus Laki-laki atau Perempuan",
   }),
 
-  birthPlace: Joi.string().min(2).max(50).optional().messages({
+  birth_place: Joi.string().min(2).max(50).optional().messages({
     "string.min": "Tempat lahir minimal 2 karakter",
     "string.max": "Tempat lahir maksimal 50 karakter",
   }),
 
-  birthDate: Joi.date().max("now").optional().messages({
+  birth_date: Joi.date().max("now").optional().messages({
     "date.max": "Tanggal lahir tidak boleh di masa depan",
   }),
 
@@ -126,44 +127,47 @@ const updateCertificateSchema = Joi.object({
     "number.max": "Usia maksimal 80 tahun",
   }),
 
-  certificateType: Joi.string()
-    .valid("Buat Baru", "Perpanjang")
+  certificate_type: Joi.string()
+    .valid("Baru", "Perpanjang")
     .optional()
     .messages({
-      "any.only": "Jenis sertifikat harus berupa Buat Baru atau Perpanjang",
+      "any.only": "Jenis sertifikat harus berupa 'Baru' atau 'Perpanjang'",
     }),
 
-  licenseClass: Joi.string().valid("A", "B", "C", "D").optional().messages({
-    "any.only": "Golongan SIM harus berupa A, B, C, atau D",
-  }),
+  license_class: Joi.string()
+    .valid("A", "A Umum", "B1", "B1 Umum", "B2", "B2 Umum", "C", "C1", "C2", "D", "D1")
+    .optional()
+    .messages({
+      "any.only": "Golongan SIM harus berupa A, A Umum, B1, B1 Umum, B2, B2 Umum, C, C1, C2, D, atau D1",
+    }),
 
-  domicile: Joi.string().min(5).max(100).optional().messages({
+  domicile: Joi.string().min(5).max(200).optional().messages({
     "string.min": "Domisili minimal 5 karakter",
-    "string.max": "Domisili maksimal 100 karakter",
+    "string.max": "Domisili maksimal 200 karakter",
   }),
 
-  issueDate: Joi.date().max("now").optional().messages({
+  issue_date: Joi.date().max("now").optional().messages({
     "date.max": "Tanggal penerbitan tidak boleh di masa depan",
   }),
 
-  expirationDate: Joi.date().optional(),
+  expiration_date: Joi.date().optional(),
 
-  participantPhotoUrl: Joi.string()
+  participant_photo_url: Joi.string()
     .uri({ relativeOnly: true })
     .optional()
     .allow(null, ""),
 
-  signatureQrUrl: Joi.string()
+  signature_qr_url: Joi.string()
     .uri({ relativeOnly: true })
     .optional()
     .allow(null, ""),
 
-  certificateFileUrl: Joi.string()
+  certificate_file_url: Joi.string()
     .uri({ relativeOnly: true })
     .optional()
     .allow(null, ""),
 
-  certificateNumber: Joi.string().max(50).optional(),
+  certificate_number: Joi.string().max(50).optional(),
 })
   .min(1)
   .messages({
@@ -172,10 +176,9 @@ const updateCertificateSchema = Joi.object({
 
 // Schema untuk validasi query parameter pencarian
 const searchQuerySchema = Joi.object({
-  q: Joi.string().min(1).max(100).required().messages({
+  q: Joi.string().min(1).max(100).optional().allow('').messages({
     "string.min": "Query pencarian tidak boleh kosong",
     "string.max": "Query pencarian maksimal 100 karakter",
-    "any.required": "Parameter pencarian q wajib ada",
   }),
 
   page: Joi.number().integer().min(1).optional().default(1),
@@ -185,10 +188,13 @@ const searchQuerySchema = Joi.object({
 
 // Schema untuk validasi filter golongan SIM
 const licenseClassFilterSchema = Joi.object({
-  class: Joi.string().valid("A", "B", "C", "D").required().messages({
-    "any.only": "Golongan SIM harus berupa A, B, C, atau D",
-    "any.required": "Parameter class wajib ada",
-  }),
+  class: Joi.string()
+    .valid("A", "A Umum", "B1", "B1 Umum", "B2", "B2 Umum", "C", "C1", "C2", "D", "D1")
+    .required()
+    .messages({
+      "any.only": "Golongan SIM harus berupa A, A Umum, B1, B1 Umum, B2, B2 Umum, C, C1, C2, D, atau D1",
+      "any.required": "Parameter class wajib ada",
+    }),
 
   page: Joi.number().integer().min(1).optional().default(1),
 
@@ -197,15 +203,16 @@ const licenseClassFilterSchema = Joi.object({
 
 // Schema untuk validasi query parameter umum
 const generalQuerySchema = Joi.object({
-  search: Joi.string().min(1).max(100).optional().messages({
+  search: Joi.string().min(1).max(100).optional().allow('').messages({
     "string.min": "Query pencarian tidak boleh kosong",
     "string.max": "Query pencarian maksimal 100 karakter",
   }),
 
-  // PERBAIKAN: Sesuaikan dengan yang sebenarnya digunakan
-  certificateType: Joi.string().valid("Buat Baru", "Perpanjang").optional(),
+  certificateType: Joi.string().valid("Baru", "Perpanjang").optional(),
 
-  licenseClass: Joi.string().valid("A", "B", "C", "D").optional(),
+  licenseClass: Joi.string()
+    .valid("A", "A Umum", "B1", "B1 Umum", "B2", "B2 Umum", "C", "C1", "C2", "D", "D1")
+    .optional(),
 
   gender: Joi.string().valid("Laki-laki", "Perempuan").optional(),
 

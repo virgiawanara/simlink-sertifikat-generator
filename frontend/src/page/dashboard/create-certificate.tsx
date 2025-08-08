@@ -1,3 +1,4 @@
+// Frontend component yang diperbaiki sesuai spesifikasi database
 import React, { useState, useCallback } from "react";
 import {
   Card,
@@ -32,44 +33,44 @@ import { id } from "date-fns/locale";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-// Interface for Certificate data structure
+// ✅ Interface menggunakan nama field database
 interface CertificateData {
   id: number;
-  participantFullName: string;
-  participantNIK?: string;
+  full_name: string;
+  nik?: string;
   gender: "Laki-laki" | "Perempuan";
-  birthPlace: string;
-  birthDate: string;
+  birth_place: string;
+  birth_date: string;
   age: number;
-  certificateType: "Perpanjang" | "Buat Baru";
-  licenseClass: "A" | "B" | "C";
+  certificate_type: "Baru" | "Perpanjang";  // ✅ SESUAI SPESIFIKASI
+  license_class: "A" | "A Umum" | "B1" | "B1 Umum" | "B2" | "B2 Umum" | "C" | "C1" | "C2" | "D" | "D1";  // ✅ SESUAI SPESIFIKASI
   domicile: string;
-  participantPhotoUrl?: string;
-  certificateNumber: string;
-  issueDate: string;
-  expirationDate?: string;
-  certificateFileUrl?: string;
-  signatureQrUrl?: string;
-  issuedByUserId: number;
-  userId?: number;
+  participant_photo_url?: string;
+  certificate_number: string;
+  issue_date: string;
+  expiration_date?: string;
+  certificate_file_url?: string;
+  signature_qr_url?: string;
+  issued_by_user_id: number;
+  user_id?: number;
 }
 
-// Interface for form input state
+// ✅ Interface form menggunakan nama field database
 interface CertificateFormData {
-  participantFullName: string;
-  participantNIK: string;
+  full_name: string;
+  nik: string;
   gender: "Laki-laki" | "Perempuan" | "";
-  birthPlace: string;
-  birthDate: Date | undefined;
+  birth_place: string;
+  birth_date: Date | undefined;
   age: string;
-  certificateType: "Perpanjang" | "Buat Baru" | "";
-  licenseClass: "A" | "B" | "C" | "";
+  certificate_type: "Baru" | "Perpanjang" | "";  // ✅ SESUAI SPESIFIKASI
+  license_class: "A" | "A Umum" | "B1" | "B1 Umum" | "B2" | "B2 Umum" | "C" | "C1" | "C2" | "D" | "D1" | "";  // ✅ SESUAI SPESIFIKASI
   domicile: string;
-  participantPhotoUrl: File | null;
-  signatureQrUrl: File | null;
+  participant_photo_url: File | null;
+  signature_qr_url: File | null;
 }
 
-// Custom Hook for Certificate API operations
+// Updated API hook dengan nama field database
 const useCertificateAPI = () => {
   const handleAPIResponse = async (response: Response): Promise<any> => {
     const jsonResponse = await response.json();
@@ -97,32 +98,41 @@ const useCertificateAPI = () => {
   const createNewCertificate = useCallback(
     async (formData: CertificateFormData): Promise<CertificateData> => {
       const requestData = new FormData();
+      
+      // ✅ PERBAIKAN: Handle field names sesuai database
       for (const key in formData) {
         const typedKey = key as keyof CertificateFormData;
         const value = formData[typedKey];
+        
         if (value !== undefined && value !== null) {
-          if (typedKey === "birthDate" && value instanceof Date) {
+          if (typedKey === "birth_date" && value instanceof Date) {
             requestData.append(typedKey, value.toISOString().split("T")[0]);
-          } else if (
-            typedKey === "participantPhotoUrl" &&
-            value instanceof File
-          ) {
+          } else if (typedKey === "participant_photo_url" && value instanceof File) {
             requestData.append(typedKey, value);
-          } else if (typedKey === "signatureQrUrl" && value instanceof File) {
+          } else if (typedKey === "signature_qr_url" && value instanceof File) {
             requestData.append(typedKey, value);
+          } else if (typedKey === "nik") {
+            // ✅ PERBAIKAN: Only append NIK if it's not empty
+            if (value && String(value).trim() !== "") {
+              requestData.append(typedKey, String(value));
+            }
           } else {
             requestData.append(typedKey, String(value));
           }
         }
       }
+
+      console.log("FormData being sent:");
+      for (let [key, value] of requestData.entries()) {
+        console.log(key, value);
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/certificates`, {
-        headers: {
-          Accept: "application/json",
-        },
         method: "POST",
         body: requestData,
         credentials: "include",
       });
+      
       const result = await handleAPIResponse(response);
       return result.data.certificate;
     },
@@ -156,19 +166,20 @@ export default function CertificateCreationPage() {
 
   const [isFormLoading, setIsFormLoading] = useState<boolean>(false);
 
+  // ✅ PERBAIKAN: State menggunakan nama field database
   const [certificateFormData, setCertificateFormData] =
     useState<CertificateFormData>({
-      participantFullName: "",
-      participantNIK: "",
+      full_name: "",
+      nik: "",
       gender: "",
-      birthPlace: "",
-      birthDate: undefined,
+      birth_place: "",
+      birth_date: undefined,
       age: "",
-      certificateType: "",
-      licenseClass: "",
+      certificate_type: "",
+      license_class: "",
       domicile: "",
-      participantPhotoUrl: null,
-      signatureQrUrl: null,
+      participant_photo_url: null,
+      signature_qr_url: null,
     });
 
   const handleInputFieldChange = (
@@ -194,7 +205,7 @@ export default function CertificateCreationPage() {
   const handleBirthDateChange = (selectedDate: Date | undefined) => {
     setCertificateFormData((previousData) => ({
       ...previousData,
-      birthDate: selectedDate,
+      birth_date: selectedDate,
     }));
     if (selectedDate) {
       const currentDate = new Date();
@@ -222,12 +233,12 @@ export default function CertificateCreationPage() {
     if (event.target.files && event.target.files.length > 0) {
       setCertificateFormData((previousData) => ({
         ...previousData,
-        participantPhotoUrl: event.target.files![0],
+        participant_photo_url: event.target.files![0],
       }));
     } else {
       setCertificateFormData((previousData) => ({
         ...previousData,
-        participantPhotoUrl: null,
+        participant_photo_url: null,
       }));
     }
   };
@@ -238,12 +249,12 @@ export default function CertificateCreationPage() {
     if (event.target.files && event.target.files.length > 0) {
       setCertificateFormData((previousData) => ({
         ...previousData,
-        signatureQrUrl: event.target.files![0],
+        signature_qr_url: event.target.files![0],
       }));
     } else {
       setCertificateFormData((previousData) => ({
         ...previousData,
-        signatureQrUrl: null,
+        signature_qr_url: null,
       }));
     }
   };
@@ -254,18 +265,30 @@ export default function CertificateCreationPage() {
     event.preventDefault();
     setIsFormLoading(true);
 
+    // ✅ PERBAIKAN: Updated validation dengan nama field database
     if (
-      !certificateFormData.participantFullName ||
+      !certificateFormData.full_name ||
       !certificateFormData.gender ||
-      !certificateFormData.birthPlace ||
-      !certificateFormData.birthDate ||
+      !certificateFormData.birth_place ||
+      !certificateFormData.birth_date ||
       !certificateFormData.age ||
-      !certificateFormData.certificateType ||
-      !certificateFormData.licenseClass ||
+      !certificateFormData.certificate_type ||
+      !certificateFormData.license_class ||
       !certificateFormData.domicile
     ) {
       toast.error("Input Tidak Lengkap", {
         description: "Mohon lengkapi semua data wajib.",
+      });
+      setIsFormLoading(false);
+      return;
+    }
+
+    // ✅ PERBAIKAN: Validate NIK only if provided
+    if (certificateFormData.nik && 
+        certificateFormData.nik.trim() !== "" && 
+        certificateFormData.nik.length !== 16) {
+      toast.error("NIK Tidak Valid", {
+        description: "NIK harus berupa 16 digit angka.",
       });
       setIsFormLoading(false);
       return;
@@ -278,23 +301,25 @@ export default function CertificateCreationPage() {
         certificateFormData
       );
       toast.success("Sertifikat Berhasil Dibuat", {
-        description: `Sertifikat untuk ${newCertificateData.participantFullName} berhasil dibuat!`,
+        description: `Sertifikat untuk ${newCertificateData.full_name} berhasil dibuat!`,
       });
+      
       // Reset form data
       setCertificateFormData({
-        participantFullName: "",
-        participantNIK: "",
+        full_name: "",
+        nik: "",
         gender: "",
-        birthPlace: "",
-        birthDate: undefined,
+        birth_place: "",
+        birth_date: undefined,
         age: "",
-        certificateType: "",
-        licenseClass: "",
+        certificate_type: "",
+        license_class: "",
         domicile: "",
-        participantPhotoUrl: null,
-        signatureQrUrl: null,
+        participant_photo_url: null,
+        signature_qr_url: null,
       });
-      // Reset file input
+      
+      // Reset file inputs
       const photoUploadElement = document.getElementById(
         "participantPhotoUpload"
       ) as HTMLInputElement;
@@ -332,34 +357,44 @@ export default function CertificateCreationPage() {
           <CardContent>
             <form onSubmit={handleCertificateFormSubmit}>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {/* ✅ PERBAIKAN: Field IDs menggunakan nama database */}
                 <div className="space-y-2">
-                  <Label htmlFor="participantFullName">
-                    Nama Lengkap Peserta
+                  <Label htmlFor="full_name">
+                    Nama Lengkap Peserta *
                   </Label>
                   <Input
-                    id="participantFullName"
+                    id="full_name"
                     placeholder="Masukkan nama lengkap"
-                    value={certificateFormData.participantFullName}
+                    value={certificateFormData.full_name}
                     onChange={handleInputFieldChange}
+                    required
                   />
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="participantNIK">NIK</Label>
+                  <Label htmlFor="nik">NIK (Opsional)</Label>
                   <Input
-                    id="participantNIK"
+                    id="nik"
                     placeholder="Masukkan NIK (16 digit)"
-                    value={certificateFormData.participantNIK}
+                    value={certificateFormData.nik}
                     onChange={handleInputFieldChange}
                     maxLength={16}
+                    pattern="[0-9]{16}"
+                    title="NIK harus berupa 16 digit angka"
                   />
+                  <p className="text-xs text-gray-500">
+                    NIK bersifat opsional. Jika diisi, harus 16 digit angka.
+                  </p>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="gender">Jenis Kelamin</Label>
+                  <Label htmlFor="gender">Jenis Kelamin *</Label>
                   <Select
                     onValueChange={(value) =>
                       handleSelectFieldChange("gender", value)
                     }
-                    value={certificateFormData.gender}>
+                    value={certificateFormData.gender}
+                    required>
                     <SelectTrigger id="gender">
                       <SelectValue placeholder="Pilih jenis kelamin" />
                     </SelectTrigger>
@@ -369,28 +404,31 @@ export default function CertificateCreationPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="birthPlace">Tempat Lahir</Label>
+                  <Label htmlFor="birth_place">Tempat Lahir *</Label>
                   <Input
-                    id="birthPlace"
+                    id="birth_place"
                     placeholder="Masukkan tempat lahir"
-                    value={certificateFormData.birthPlace}
+                    value={certificateFormData.birth_place}
                     onChange={handleInputFieldChange}
+                    required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="birthDate">Tanggal Lahir</Label>
+                  <Label htmlFor="birth_date">Tanggal Lahir *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant={"outline"}
                         className={`w-full justify-start text-left font-normal ${
-                          !certificateFormData.birthDate &&
+                          !certificateFormData.birth_date &&
                           "text-muted-foreground"
                         }`}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {certificateFormData.birthDate ? (
-                          format(certificateFormData.birthDate, "PPP", {
+                        {certificateFormData.birth_date ? (
+                          format(certificateFormData.birth_date, "PPP", {
                             locale: id,
                           })
                         ) : (
@@ -401,15 +439,18 @@ export default function CertificateCreationPage() {
                     <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
-                        selected={certificateFormData.birthDate}
+                        selected={certificateFormData.birth_date}
                         onSelect={handleBirthDateChange}
                         captionLayout="dropdown"
                         initialFocus
                         locale={id}
+                        fromYear={1940}
+                        toYear={new Date().getFullYear() - 17}
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="age">Usia</Label>
                   <Input
@@ -421,51 +462,68 @@ export default function CertificateCreationPage() {
                     readOnly
                   />
                 </div>
+
+                {/* ✅ PERBAIKAN: Certificate Type dengan nilai sesuai spesifikasi */}
                 <div className="space-y-2">
-                  <Label htmlFor="certificateType">Jenis SIM</Label>
+                  <Label htmlFor="certificate_type">Jenis SIM *</Label>
                   <Select
                     onValueChange={(value) =>
-                      handleSelectFieldChange("certificateType", value)
+                      handleSelectFieldChange("certificate_type", value)
                     }
-                    value={certificateFormData.certificateType}>
-                    <SelectTrigger id="certificateType">
+                    value={certificateFormData.certificate_type}
+                    required>
+                    <SelectTrigger id="certificate_type">
                       <SelectValue placeholder="Pilih jenis SIM" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="Baru">Baru</SelectItem>
                       <SelectItem value="Perpanjang">Perpanjang</SelectItem>
-                      <SelectItem value="Buat Baru">Buat Baru</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* ✅ PERBAIKAN: License Class dengan semua opsi sesuai spesifikasi */}
                 <div className="space-y-2">
-                  <Label htmlFor="licenseClass">Golongan SIM</Label>
+                  <Label htmlFor="license_class">Golongan SIM *</Label>
                   <Select
                     onValueChange={(value) =>
-                      handleSelectFieldChange("licenseClass", value)
+                      handleSelectFieldChange("license_class", value)
                     }
-                    value={certificateFormData.licenseClass}>
-                    <SelectTrigger id="licenseClass">
+                    value={certificateFormData.license_class}
+                    required>
+                    <SelectTrigger id="license_class">
                       <SelectValue placeholder="Pilih golongan SIM" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="A">A</SelectItem>
-                      <SelectItem value="B">B</SelectItem>
+                      <SelectItem value="A Umum">A Umum</SelectItem>
+                      <SelectItem value="B1">B1</SelectItem>
+                      <SelectItem value="B1 Umum">B1 Umum</SelectItem>
+                      <SelectItem value="B2">B2</SelectItem>
+                      <SelectItem value="B2 Umum">B2 Umum</SelectItem>
                       <SelectItem value="C">C</SelectItem>
+                      <SelectItem value="C1">C1</SelectItem>
+                      <SelectItem value="C2">C2</SelectItem>
+                      <SelectItem value="D">D</SelectItem>
+                      <SelectItem value="D1">D1</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2 col-span-full">
-                  <Label htmlFor="domicile">Domisili</Label>
+                  <Label htmlFor="domicile">Domisili *</Label>
                   <Textarea
                     id="domicile"
                     placeholder="Masukkan alamat domisili lengkap"
                     value={certificateFormData.domicile}
                     onChange={handleInputFieldChange}
+                    required
                   />
                 </div>
-                {/* Participant Photo Upload */}
+
+                {/* File upload sections */}
                 <div className="space-y-2 col-span-full">
-                  <Label htmlFor="participantPhotoUpload">Foto Peserta</Label>
+                  <Label htmlFor="participantPhotoUpload">Foto Peserta (Opsional)</Label>
                   <div className="flex items-center justify-center w-full">
                     <Label
                       htmlFor="participantPhotoUpload"
@@ -492,12 +550,12 @@ export default function CertificateCreationPage() {
                           atau seret dan lepas
                         </p>
                         <p className="text-xs text-gray-500">
-                          PNG, JPG (MAX. 800x400px)
+                          PNG, JPG (MAX. 5MB)
                         </p>
-                        {certificateFormData.participantPhotoUrl && (
+                        {certificateFormData.participant_photo_url && (
                           <p className="text-xs text-blue-600 mt-1">
                             File terpilih:{" "}
-                            {certificateFormData.participantPhotoUrl.name}
+                            {certificateFormData.participant_photo_url.name}
                           </p>
                         )}
                       </div>
@@ -506,15 +564,15 @@ export default function CertificateCreationPage() {
                         type="file"
                         className="hidden"
                         onChange={handleParticipantPhotoUpload}
-                        accept="image/png, image/jpeg"
+                        accept="image/png, image/jpeg, image/jpg"
                       />
                     </Label>
                   </div>
                 </div>
-                {/* Signature Image Upload */}
+
                 <div className="space-y-2 col-span-full">
                   <Label htmlFor="signatureImageUpload">
-                    QR Code Tanda Tangan
+                    QR Code Tanda Tangan (Opsional)
                   </Label>
                   <div className="flex items-center justify-center w-full">
                     <Label
@@ -541,12 +599,12 @@ export default function CertificateCreationPage() {
                           atau seret dan lepas
                         </p>
                         <p className="text-xs text-gray-500">
-                          PNG, JPG (MAX. 800x400px)
+                          PNG, JPG (MAX. 5MB)
                         </p>
-                        {certificateFormData.signatureQrUrl && (
+                        {certificateFormData.signature_qr_url && (
                           <p className="text-xs text-blue-600 mt-1">
                             File terpilih:{" "}
-                            {certificateFormData.signatureQrUrl.name}
+                            {certificateFormData.signature_qr_url.name}
                           </p>
                         )}
                       </div>
@@ -555,12 +613,17 @@ export default function CertificateCreationPage() {
                         type="file"
                         className="hidden"
                         onChange={handleSignatureImageUpload}
-                        accept="image/png, image/jpeg"
+                        accept="image/png, image/jpeg, image/jpg"
                       />
                     </Label>
                   </div>
                 </div>
               </div>
+
+              <div className="mt-6 text-sm text-gray-600">
+                <p>* Field wajib diisi</p>
+              </div>
+
               <Button
                 type="submit"
                 className="mt-6 w-full"
