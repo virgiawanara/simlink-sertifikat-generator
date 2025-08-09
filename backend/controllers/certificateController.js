@@ -652,16 +652,21 @@ class CertificateController {
         });
       }
 
-      // Konversi PNG ke PDF dan kirim ke client
+      // ✅ PERBAIKAN: Path untuk halaman kedua (Hasil Test.png)
+      const hasilTestPath = path.join(__dirname, "../assets/template/Hasil Test.png");
+      console.log("Hasil Test path:", hasilTestPath);
+
+      // Konversi PNG ke PDF dengan 2 halaman dan kirim ke client
       const fileName = `certificate-${certificate.certificate_number}.pdf`;
       res.setHeader("Content-disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
+      
       const doc = new PDFDocument({ autoFirstPage: false });
       
       // Pipe PDF stream ke response
       doc.pipe(res);
       
-      // Dapatkan ukuran gambar PNG
+      // ✅ HALAMAN 1: Sertifikat utama
       const sizeOf = require("image-size");
       let imageDimensions;
       try {
@@ -671,7 +676,7 @@ class CertificateController {
         imageDimensions = { width: 595, height: 842, type: "png" };
       }
       
-      // Buat halaman PDF dengan ukuran gambar
+      // Buat halaman PDF dengan ukuran gambar sertifikat
       doc.addPage({
         size: [imageDimensions.width, imageDimensions.height],
         margin: 0,
@@ -680,6 +685,37 @@ class CertificateController {
         width: imageDimensions.width,
         height: imageDimensions.height,
       });
+
+      // ✅ HALAMAN 2: Hasil Test (jika file ada)
+      if (fs.existsSync(hasilTestPath)) {
+        try {
+          let hasilTestDimensions;
+          try {
+            hasilTestDimensions = sizeOf(hasilTestPath);
+          } catch (e) {
+            // fallback default A4
+            hasilTestDimensions = { width: 595, height: 842, type: "png" };
+          }
+
+          // Tambah halaman kedua dengan ukuran gambar Hasil Test
+          doc.addPage({
+            size: [hasilTestDimensions.width, hasilTestDimensions.height],
+            margin: 0,
+          });
+          doc.image(hasilTestPath, 0, 0, {
+            width: hasilTestDimensions.width,
+            height: hasilTestDimensions.height,
+          });
+
+          console.log("✅ Halaman kedua (Hasil Test) berhasil ditambahkan ke PDF");
+        } catch (error) {
+          console.warn("⚠️ Gagal menambahkan halaman kedua:", error.message);
+          // Lanjutkan tanpa halaman kedua jika ada error
+        }
+      } else {
+        console.warn("⚠️ File Hasil Test.png tidak ditemukan:", hasilTestPath);
+        // Lanjutkan tanpa halaman kedua jika file tidak ada
+      }
 
       doc.end();
     } catch (error) {
@@ -871,6 +907,10 @@ class CertificateController {
           message: "File sertifikat tidak ditemukan di server.",
         });
       }
+
+      // ✅ PERBAIKAN: Path untuk halaman kedua (Hasil Test.png)
+      const hasilTestPath = path.join(__dirname, "../assets/template/Hasil Test.png");
+      console.log("Hasil Test path:", hasilTestPath);
   
       // ✅ Set explicit CORS headers untuk download
       const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -878,7 +918,7 @@ class CertificateController {
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
       
-      // Konversi PNG ke PDF dan kirim ke client
+      // Konversi PNG ke PDF dengan 2 halaman dan kirim ke client
       const fileName = `certificate-${certificate.certificate_number}.pdf`;
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
@@ -901,18 +941,18 @@ class CertificateController {
       // Pipe PDF ke response
       doc.pipe(res);
       
-      // Dapatkan ukuran gambar PNG
+      // ✅ HALAMAN 1: Sertifikat utama
       let imageDimensions;
       try {
         const sizeOf = require("image-size");
         imageDimensions = sizeOf(filePath);
-        console.log("Image dimensions:", imageDimensions);
+        console.log("Certificate image dimensions:", imageDimensions);
       } catch (e) {
-        console.warn("Could not get image dimensions, using default:", e.message);
+        console.warn("Could not get certificate image dimensions, using default:", e.message);
         imageDimensions = { width: 595, height: 842, type: "png" };
       }
       
-      // Add page dan image
+      // Add halaman pertama
       doc.addPage({
         size: [imageDimensions.width, imageDimensions.height],
         margin: 0,
@@ -922,6 +962,40 @@ class CertificateController {
         width: imageDimensions.width,
         height: imageDimensions.height,
       });
+
+      // ✅ HALAMAN 2: Hasil Test (jika file ada)
+      if (fs.existsSync(hasilTestPath)) {
+        try {
+          let hasilTestDimensions;
+          try {
+            const sizeOf = require("image-size");
+            hasilTestDimensions = sizeOf(hasilTestPath);
+            console.log("Hasil Test image dimensions:", hasilTestDimensions);
+          } catch (e) {
+            console.warn("Could not get Hasil Test image dimensions, using default:", e.message);
+            hasilTestDimensions = { width: 595, height: 842, type: "png" };
+          }
+
+          // Tambah halaman kedua
+          doc.addPage({
+            size: [hasilTestDimensions.width, hasilTestDimensions.height],
+            margin: 0,
+          });
+          
+          doc.image(hasilTestPath, 0, 0, {
+            width: hasilTestDimensions.width,
+            height: hasilTestDimensions.height,
+          });
+
+          console.log("✅ Halaman kedua (Hasil Test) berhasil ditambahkan ke PDF");
+        } catch (error) {
+          console.warn("⚠️ Gagal menambahkan halaman kedua:", error.message);
+          // Lanjutkan tanpa halaman kedua jika ada error
+        }
+      } else {
+        console.warn("⚠️ File Hasil Test.png tidak ditemukan:", hasilTestPath);
+        // Lanjutkan tanpa halaman kedua jika file tidak ada
+      }
   
       doc.end();
       console.log("PDF generation completed for:", fileName);
@@ -963,6 +1037,10 @@ class CertificateController {
           message: "File sertifikat tidak ditemukan di server.",
         });
       }
+
+      // ✅ PERBAIKAN: Path untuk halaman kedua (Hasil Test.png)
+      const hasilTestPath = path.join(__dirname, "../assets/template/Hasil Test.png");
+      console.log("Hasil Test path:", hasilTestPath);
   
       // ✅ Set explicit CORS headers untuk download
       const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -970,7 +1048,7 @@ class CertificateController {
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
       
-      // Konversi PNG ke PDF dan kirim ke client
+      // Konversi PNG ke PDF dengan 2 halaman dan kirim ke client
       const fileName = `certificate-${certificate.certificate_number}.pdf`;
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
@@ -993,18 +1071,18 @@ class CertificateController {
       // Pipe PDF ke response
       doc.pipe(res);
       
-      // Dapatkan ukuran gambar PNG
+      // ✅ HALAMAN 1: Sertifikat utama
       let imageDimensions;
       try {
         const sizeOf = require("image-size");
         imageDimensions = sizeOf(filePath);
-        console.log("Image dimensions:", imageDimensions);
+        console.log("Certificate image dimensions:", imageDimensions);
       } catch (e) {
-        console.warn("Could not get image dimensions, using default:", e.message);
+        console.warn("Could not get certificate image dimensions, using default:", e.message);
         imageDimensions = { width: 595, height: 842, type: "png" };
       }
       
-      // Add page dan image
+      // Add halaman pertama
       doc.addPage({
         size: [imageDimensions.width, imageDimensions.height],
         margin: 0,
@@ -1014,6 +1092,40 @@ class CertificateController {
         width: imageDimensions.width,
         height: imageDimensions.height,
       });
+
+      // ✅ HALAMAN 2: Hasil Test (jika file ada)
+      if (fs.existsSync(hasilTestPath)) {
+        try {
+          let hasilTestDimensions;
+          try {
+            const sizeOf = require("image-size");
+            hasilTestDimensions = sizeOf(hasilTestPath);
+            console.log("Hasil Test image dimensions:", hasilTestDimensions);
+          } catch (e) {
+            console.warn("Could not get Hasil Test image dimensions, using default:", e.message);
+            hasilTestDimensions = { width: 595, height: 842, type: "png" };
+          }
+
+          // Tambah halaman kedua
+          doc.addPage({
+            size: [hasilTestDimensions.width, hasilTestDimensions.height],
+            margin: 0,
+          });
+          
+          doc.image(hasilTestPath, 0, 0, {
+            width: hasilTestDimensions.width,
+            height: hasilTestDimensions.height,
+          });
+
+          console.log("✅ Halaman kedua (Hasil Test) berhasil ditambahkan ke PDF");
+        } catch (error) {
+          console.warn("⚠️ Gagal menambahkan halaman kedua:", error.message);
+          // Lanjutkan tanpa halaman kedua jika ada error
+        }
+      } else {
+        console.warn("⚠️ File Hasil Test.png tidak ditemukan:", hasilTestPath);
+        // Lanjutkan tanpa halaman kedua jika file tidak ada
+      }
   
       doc.end();
       console.log("PDF generation completed for:", fileName);
