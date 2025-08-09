@@ -339,7 +339,7 @@ export default function CertificateCreationPage() {
       {/* Main Content Area */}
       <main className="flex-1 p-8">
         <h1 className="text-3xl font-bold mb-8 text-gray-900">
-          Selamat Datang di Dashboard 👋
+          Selamat Datang di Dashboard
         </h1>
 
         {/* Certificate Creation Section */}

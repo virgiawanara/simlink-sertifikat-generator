@@ -548,7 +548,7 @@ export default function CertificateListPage() {
     <div className="flex min-h-screen">
       <main className="flex-1 p-4 md:p-8 max-w-screen overflow-x-hidden">
         <h1 className="text-3xl font-bold mb-8 text-gray-900">
-          Selamat Datang di Dashboard 👋
+          Selamat Datang di Dashboard
         </h1>
         <Card className="shadow-md">
           <CardHeader>
