@@ -18,17 +18,18 @@ const getApiBaseUrl = () => {
     }
   };
   
-  const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = getApiBaseUrl();
 
+// ✅ PERBAIKAN: Interface menggunakan field names database sesuai spesifikasi baru
 interface CertificateViewData {
   id: number;
-  participantFullName: string;
-  certificateNumber: string;
-  licenseClass: "A" | "B" | "C";
-  certificateType: "Perpanjang" | "Buat Baru";
-  issueDate: string;
-  expirationDate: string;
-  certificateFileUrl?: string;
+  full_name: string; // ✅ SESUAI database field
+  certificate_number: string; // ✅ SESUAI database field
+  license_class: "A" | "A Umum" | "B1" | "B1 Umum" | "B2" | "B2 Umum" | "C" | "C1" | "C2" | "D" | "D1"; // ✅ SESUAI database enum
+  certificate_type: "Baru" | "Perpanjang"; // ✅ SESUAI database enum
+  issue_date: string; // ✅ SESUAI database field
+  expiration_date: string; // ✅ SESUAI database field
+  certificate_file_url?: string; // ✅ SESUAI database field
   isValid: boolean;
 }
 
@@ -57,6 +58,7 @@ export default function CertificateView() {
     const fetchCertificate = async () => {
       try {
         setLoading(true);
+        // ✅ PERBAIKAN: Menggunakan endpoint public view yang benar
         const response = await fetch(
           `${API_BASE_URL}/api/certificates/view/${certificateNumber}`,
           {
@@ -64,6 +66,7 @@ export default function CertificateView() {
             headers: {
               "Content-Type": "application/json",
             },
+            // Tidak perlu credentials untuk public view
           }
         );
 
@@ -94,13 +97,12 @@ export default function CertificateView() {
     if (!certificate) return;
     
     try {
+      // ✅ PERBAIKAN: Menggunakan endpoint public download yang benar
       const response = await fetch(
-        `${API_BASE_URL}/api/certificates/download/${certificate.certificateNumber}`,
+        `${API_BASE_URL}/api/certificates/download/${certificate.certificate_number}`,
         {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          // Tidak perlu credentials untuk public download
         }
       );
   
@@ -109,7 +111,7 @@ export default function CertificateView() {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `certificate-${certificate.certificateNumber}.pdf`;
+        link.download = `certificate-${certificate.certificate_number}.pdf`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -231,7 +233,7 @@ export default function CertificateView() {
                   <div className="flex items-center mt-2">
                     <User className="w-5 h-5 mr-3 text-gray-400" />
                     <p className="text-xl font-bold text-gray-900">
-                      {certificate.participantFullName}
+                      {certificate.full_name}
                     </p>
                   </div>
                 </div>
@@ -241,7 +243,7 @@ export default function CertificateView() {
                     Nomor Sertifikat
                   </label>
                   <p className="text-lg font-mono bg-gray-100 px-4 py-3 rounded-lg mt-2 border">
-                    {certificate.certificateNumber}
+                    {certificate.certificate_number}
                   </p>
                 </div>
 
@@ -251,7 +253,7 @@ export default function CertificateView() {
                       Jenis SIM
                     </label>
                     <p className="text-lg font-semibold text-gray-900 mt-2">
-                      {certificate.certificateType}
+                      {certificate.certificate_type}
                     </p>
                   </div>
                   <div>
@@ -259,7 +261,7 @@ export default function CertificateView() {
                       Golongan SIM
                     </label>
                     <p className="text-lg font-semibold text-gray-900 mt-2">
-                      Golongan {certificate.licenseClass}
+                      {certificate.license_class}
                     </p>
                   </div>
                 </div>
@@ -273,7 +275,7 @@ export default function CertificateView() {
                   <div className="flex items-center mt-2">
                     <Calendar className="w-5 h-5 mr-3 text-gray-400" />
                     <p className="text-lg font-medium">
-                      {formatDate(certificate.issueDate)}
+                      {formatDate(certificate.issue_date)}
                     </p>
                   </div>
                 </div>
@@ -287,7 +289,7 @@ export default function CertificateView() {
                     <p className={`text-lg font-medium ${
                       certificate.isValid ? "text-green-600" : "text-red-600"
                     }`}>
-                      {formatDate(certificate.expirationDate)}
+                      {formatDate(certificate.expiration_date)}
                     </p>
                   </div>
                 </div>
@@ -296,12 +298,12 @@ export default function CertificateView() {
                   <Button 
                     onClick={handleDownloadCertificate}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
-                    disabled={!certificate.certificateFileUrl}
+                    disabled={!certificate.certificate_file_url}
                   >
                     <Download className="w-5 h-5 mr-2" />
                     Unduh Sertifikat PDF
                   </Button>
-                  {!certificate.certificateFileUrl && (
+                  {!certificate.certificate_file_url && (
                     <p className="text-xs text-gray-500 mt-1 text-center">
                       File sertifikat belum tersedia
                     </p>
@@ -313,7 +315,7 @@ export default function CertificateView() {
         </Card>
 
         {/* Preview Certificate Image */}
-        {certificate.certificateFileUrl && (
+        {certificate.certificate_file_url && (
           <Card className="shadow-lg">
             <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
               <CardTitle className="text-xl">Preview Sertifikat</CardTitle>
@@ -324,10 +326,14 @@ export default function CertificateView() {
             <CardContent className="p-6">
               <div className="flex justify-center bg-white rounded-lg shadow-inner p-4">
                 <img
-                  src={`${API_BASE_URL}${certificate.certificateFileUrl}`}
+                  src={`${API_BASE_URL}${certificate.certificate_file_url}`}
                   alt="Certificate Preview"
                   className="max-w-full h-auto border-2 border-gray-200 rounded-lg shadow-lg"
                   style={{ maxHeight: "700px" }}
+                  onError={(e) => {
+                    console.error("Failed to load certificate image");
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
               </div>
             </CardContent>
