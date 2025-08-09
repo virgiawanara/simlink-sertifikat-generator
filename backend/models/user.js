@@ -1,4 +1,6 @@
+// models/User.js - Sequelize Model for User
 "use strict";
+const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define(
@@ -10,27 +12,35 @@ module.exports = (sequelize, DataTypes) => {
         autoIncrement: true,
       },
       role: {
-        type: DataTypes.ENUM("admin"),
+        type: DataTypes.STRING(10),
         allowNull: false,
-        defaultValue: "admin",
+        defaultValue: 'admin',
+        validate: {
+          isIn: [['admin']]
+        },
+        field: "role",
       },
       email: {
         type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
         validate: {
-          isEmail: true,
+          isEmail: true
         },
+        field: "email",
       },
       password: {
         type: DataTypes.STRING(255),
         allowNull: false,
+        field: "password",
       },
     },
     {
       tableName: "users",
       timestamps: true,
-      underscored: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+      underscored: false,
       indexes: [
         {
           unique: true,
@@ -44,8 +54,15 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   User.associate = (models) => {
+    // Association untuk certificates yang diterbitkan user
     User.hasMany(models.Certificate, {
-      foreignKey: "userId",
+      foreignKey: "issuedByUserId",
+      as: "issuedCertificates",
+    });
+    
+    // Association untuk certificates milik user (opsional)
+    User.hasMany(models.Certificate, {
+      foreignKey: "userId", 
       as: "certificates",
     });
   };

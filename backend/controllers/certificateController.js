@@ -1,3 +1,4 @@
+// controllers/certificateController.js - Controller yang diperbaiki sesuai spesifikasi database
 const CertificateService = require("../services/certificateService");
 const PDFDocument = require("pdfkit");
 const {
@@ -86,16 +87,15 @@ class CertificateController {
       console.log("req.files:", req.files);
       console.log("req.body:", req.body);
 
+      // ✅ PERBAIKAN: Validasi menggunakan schema dengan nama field database
       const { error, value } = createCertificateSchema.validate(req.body);
       if (error) {
         // Clean up uploaded files if validation fails
         if (req.files) {
-          if (req.files.participantPhotoUrl) {
-            fs.unlinkSync(req.files.participantPhotoUrl[0].path);
+          if (req.files.participant_photo_url) {
+            fs.unlinkSync(req.files.participant_photo_url[0].path);
           }
-          if (req.files.signatureQrUrl) {
-            fs.unlinkSync(req.files.signatureQrUrl[0].path);
-          }
+          // ✅ PERBAIKAN: signature_qr_url cleanup dihapus
         }
         return res.status(400).json({
           success: false,
@@ -105,28 +105,23 @@ class CertificateController {
 
       const issuedByUserId = req.user.id;
       const issueDate = new Date();
-      const expirationDate =
-        CertificateController.calculateExpirationDate(issueDate);
+      const expirationDate = CertificateController.calculateExpirationDate(issueDate);
 
-      let participantPhotoUrl = null;
-      let signatureQrUrl = null;
+      let participant_photo_url = null;
+      // ✅ PERBAIKAN: signature_qr_url dihapus - menggunakan static image
 
-      // Handle participant photo
-      if (req.files && req.files.participantPhotoUrl) {
-        participantPhotoUrl = `/uploads/photos/${req.files.participantPhotoUrl[0].filename}`;
+      // ✅ PERBAIKAN: Handle participant photo dengan nama field database
+      if (req.files && req.files.participant_photo_url) {
+        participant_photo_url = `/uploads/photos/${req.files.participant_photo_url[0].filename}`;
       }
 
-      // Handle signature QR image
-      if (req.files && req.files.signatureQrUrl) {
-        signatureQrUrl = `/uploads/signatures/${req.files.signatureQrUrl[0].filename}`;
-      }
-
+      // ✅ PERBAIKAN: Data menggunakan nama field database
       const certificateData = {
         ...value,
-        participantPhotoUrl: participantPhotoUrl,
-        signatureQrUrl: signatureQrUrl,
-        issueDate,
-        expirationDate,
+        participant_photo_url: participant_photo_url,
+        // signature_qr_url dihapus - menggunakan static image
+        issue_date: issueDate,
+        expiration_date: expirationDate,
       };
 
       const certificate = await CertificateService.createCertificate(
@@ -159,12 +154,10 @@ class CertificateController {
     } catch (error) {
       // Clean up uploaded files if error occurs
       if (req.files) {
-        if (req.files.participantPhotoUrl) {
-          fs.unlinkSync(req.files.participantPhotoUrl[0].path);
+        if (req.files.participant_photo_url) {
+          fs.unlinkSync(req.files.participant_photo_url[0].path);
         }
-        if (req.files.signatureQrUrl) {
-          fs.unlinkSync(req.files.signatureQrUrl[0].path);
-        }
+        // ✅ PERBAIKAN: signature_qr_url cleanup dihapus
       }
       console.error("Error saat membuat sertifikat:", error.message);
       res.status(400).json({
@@ -174,7 +167,7 @@ class CertificateController {
     }
   }
 
-  // UPDATE METHOD generateCertificate - BAGIAN QR CODE
+  // ✅ PERBAIKAN: Method generateCertificate dengan field database
   static async generateCertificate(req, res) {
     try {
       const certificateId = req.params.id;
@@ -230,16 +223,16 @@ class CertificateController {
       ctx.textAlign = "center";
       ctx.shadowColor = "rgba(0,0,0,0.16)";
       ctx.shadowBlur = 8;
-      ctx.fillText("HASIL TES PSIKOLOGI", canvasWidth / 2, 345);
+      ctx.fillText("HASIL TES PSIKOLOGI SIM", canvasWidth / 2, 345);
       ctx.restore();
 
-      // Nomor Sertifikat
+      // ✅ PERBAIKAN: Gunakan field database
       ctx.save();
-      ctx.font = "24px Arial";
+      ctx.font = "bold 24px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "center";
       ctx.fillText(
-        `No Sertifikat : ${certificate.certificateNumber || "N/A"}`,
+        `No Sertifikat : ${certificate.certificate_number || "N/A"}`,
         canvasWidth / 2,
         385
       );
@@ -260,11 +253,11 @@ class CertificateController {
       ctx.fillText("Sertifikat ini diberikan kepada:", photoX, 450);
       ctx.restore();
 
-      // Load and display participant photo
+      // ✅ PERBAIKAN: Load participant photo dengan field database
       let photoLoaded = false;
-      if (certificate.participantPhotoUrl) {
+      if (certificate.participant_photo_url) {
         try {
-          let photoPath = certificate.participantPhotoUrl;
+          let photoPath = certificate.participant_photo_url;
           if (!photoPath.startsWith("/")) photoPath = "/" + photoPath;
           const absPhotoPath = path.join(__dirname, "..", photoPath);
 
@@ -303,25 +296,13 @@ class CertificateController {
         ctx.font = "bold 20px Arial";
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
-        ctx.fillText(
-          "FOTO",
-          photoX + photoWidth / 2,
-          photoY + photoHeight / 2 - 20
-        );
-        ctx.fillText(
-          "TIDAK",
-          photoX + photoWidth / 2,
-          photoY + photoHeight / 2
-        );
-        ctx.fillText(
-          "TERSEDIA",
-          photoX + photoWidth / 2,
-          photoY + photoHeight / 2 + 20
-        );
+        ctx.fillText("FOTO", photoX + photoWidth / 2, photoY + photoHeight / 2 - 20);
+        ctx.fillText("TIDAK", photoX + photoWidth / 2, photoY + photoHeight / 2);
+        ctx.fillText("TERSEDIA", photoX + photoWidth / 2, photoY + photoHeight / 2 + 20);
         ctx.restore();
       }
 
-      // Data Peserta
+      // ✅ PERBAIKAN: Data Peserta dengan field database
       ctx.save();
       ctx.font = "22px Arial";
       ctx.fillStyle = "#000";
@@ -329,17 +310,17 @@ class CertificateController {
 
       const dataX = photoX + photoWidth + 60;
       const dataYStart = photoY + 30;
-      const dataLine = 32;
+      const dataLine = 50;
 
       const participantData = [
-        ["Nama Lengkap", certificate.participantFullName || "TIDAK TERSEDIA"],
-        ["NIK", certificate.participantNIK || "TIDAK TERSEDIA"],
+        ["Nama Lengkap", certificate.full_name || "TIDAK TERSEDIA"],
+        ["NIK", certificate.nik || "TIDAK TERSEDIA"],
         ["Jenis kelamin", certificate.gender || "TIDAK TERSEDIA"],
         [
           "Tempat, Tanggal Lahir",
-          certificate.birthPlace && certificate.birthDate
-            ? `${certificate.birthPlace}, ${new Date(
-                certificate.birthDate
+          certificate.birth_place && certificate.birth_date
+            ? `${certificate.birth_place}, ${new Date(
+                certificate.birth_date
               ).toLocaleDateString("id-ID", {
                 day: "2-digit",
                 month: "long",
@@ -351,14 +332,14 @@ class CertificateController {
           "Usia",
           certificate.age ? `${certificate.age} TAHUN` : "TIDAK TERSEDIA",
         ],
-        ["Jenis SIM", certificate.certificateType || "TIDAK TERSEDIA"],
-        ["Golongan SIM", certificate.licenseClass || "TIDAK TERSEDIA"],
+        ["Jenis SIM", certificate.certificate_type || "TIDAK TERSEDIA"],
+        ["Golongan SIM", certificate.license_class || "TIDAK TERSEDIA"],
         ["Domisili", certificate.domicile || "TIDAK TERSEDIA"],
       ];
 
       let y = dataYStart;
       participantData.forEach(([label, value]) => {
-        ctx.font = "bold 22px Arial";
+        ctx.font = "22px Arial";
         ctx.fillText(label, dataX, y);
         ctx.fillText(":", dataX + 250, y);
         ctx.fillText(value.toUpperCase(), dataX + 250 + 15, y);
@@ -366,29 +347,50 @@ class CertificateController {
       });
       ctx.restore();
 
-      // Teks "MEMENUHI SYARAT dalam mengajukan permohonan Kerja."
+      // Teks "MEMENUHI SYARAT dalam mengajukan permohonan SIM."
+      // Teks bagian 1: "MEMENUHI SYARAT" (bold)
+      const yPos = 1050;
+      const part1 = "MEMENUHI SYARAT";
+      const part2 = " dalam mengajukan permohonan SIM.";
+
+      // Ukur lebar masing-masing
+      ctx.font = "bold 23px Arial";
+      const part1Width = ctx.measureText(part1).width;
+
+      ctx.font = "23px Arial";
+      const part2Width = ctx.measureText(part2).width;
+
+      // Hitung posisi awal supaya total tetap center
+      const totalWidth = part1Width + part2Width;
+      const startX = canvasWidth / 2 - totalWidth / 2;
+
+      // Gambar bagian bold
       ctx.save();
-      ctx.font = "bold 28px Arial";
+      ctx.font = "bold 23px Arial";
       ctx.fillStyle = "#000";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        "MEMENUHI SYARAT dalam mengajukan permohonan Kerja.",
-        canvasWidth / 2,
-        1070
-      );
+      ctx.fillText(part1, startX, yPos);
       ctx.restore();
 
-      // Masa Berlaku - Updated to use issue date and calculate 6 months later
+      // Gambar bagian normal
       ctx.save();
-      ctx.font = "24px Arial";
+      ctx.font = "23px Arial";
+      ctx.fillStyle = "#000";
+      ctx.fillText(part2, startX + part1Width, yPos);
+      ctx.restore();
+
+
+      // ✅ PERBAIKAN: Masa Berlaku dengan field database
+      ctx.save();
+      ctx.font = "bold 24px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "center";
 
-      const issueDate = certificate.issueDate
-        ? new Date(certificate.issueDate)
+      const issueDate = certificate.issue_date
+        ? new Date(certificate.issue_date)
         : new Date();
-      const expirationDate =
-        CertificateController.calculateExpirationDate(issueDate);
+      const expirationDate = certificate.expiration_date 
+        ? new Date(certificate.expiration_date)
+        : CertificateController.calculateExpirationDate(issueDate);
 
       const expirationText = `Sertifikat ini berlaku sampai dengan ${expirationDate.toLocaleDateString(
         "id-ID",
@@ -398,27 +400,39 @@ class CertificateController {
           year: "numeric",
         }
       )}`;
-      ctx.fillText(expirationText, canvasWidth / 2, 1100);
+      ctx.fillText(expirationText, canvasWidth / 2, 1080);
       ctx.restore();
 
       // QR Code
-      const qrSize = 200;
-      const qrX = (canvasWidth - qrSize) / 2;
-      const qrY = canvasHeight - 470;
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173"; // URL frontend
-      const qrCodeData = `${baseUrl}/certificate/view/${certificate.certificateNumber}`;
+      const qrSize = 150;
+      const qrPadding = 10; // jarak antara QR dan border
+      const qrX = (canvasWidth - (qrSize + qrPadding * 2)) / 2;
+      const qrY = canvasHeight - 520;
+
+      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const qrCodeData = `${baseUrl}/certificate/view/${certificate.certificate_number}`;
+
       const qrCodeBuffer = await QRCode.toBuffer(qrCodeData, {
         width: qrSize,
         margin: 1,
         color: { dark: "#000", light: "#fff" },
       });
+
       const qrImage = await loadImage(qrCodeBuffer);
+
       ctx.save();
-      ctx.font = "bold 20px Arial";
-      ctx.fillStyle = "#000";
-      ctx.textAlign = "center";
-      ctx.fillText("Scan untuk Verifikasi", qrX + qrSize / 2, qrY - 15);
-      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+
+      // Gambar background/border
+      ctx.fillStyle = "#fff"; // background putih di belakang QR
+      ctx.fillRect(qrX, qrY, qrSize + qrPadding * 2, qrSize + qrPadding * 2);
+
+      ctx.lineWidth = 4; // ketebalan border
+      ctx.strokeStyle = "#000"; // warna border
+      ctx.strokeRect(qrX, qrY, qrSize + qrPadding * 2, qrSize + qrPadding * 2);
+
+      // Gambar QR code di tengah kotak
+      ctx.drawImage(qrImage, qrX + qrPadding, qrY + qrPadding, qrSize, qrSize);
+
       ctx.restore();
 
       // Tanggal pembuatan
@@ -432,33 +446,30 @@ class CertificateController {
         month: "long",
         year: "numeric",
       });
-      ctx.fillText(currentDate, canvasWidth - 270, canvasHeight - 500);
+      ctx.fillText(currentDate, canvasWidth - 220, canvasHeight - 500);
       ctx.restore();
 
-      // Tanda tangan psikolog - Use uploaded signature QR image
+      // ✅ PERBAIKAN: Tanda tangan menggunakan static image dari assets
+      const staticSignaturePath = path.join(__dirname, "../assets/template/QR TTD.png");
       let signatureLoaded = false;
-      if (certificate.signatureQrUrl) {
+      
+      if (fs.existsSync(staticSignaturePath)) {
         try {
-          let signaturePath = certificate.signatureQrUrl;
-          if (!signaturePath.startsWith("/"))
-            signaturePath = "/" + signaturePath;
-          const absSignaturePath = path.join(__dirname, "..", signaturePath);
+          const signatureQrUrl = await loadImage(staticSignaturePath);
+          const sigWidth = 150;
+          const sigHeight = 150;
+          const sigX = canvasWidth - 290;
+          const sigY = canvasHeight - 480;
 
-          if (fs.existsSync(absSignaturePath)) {
-            const signatureQrUrl = await loadImage(absSignaturePath);
-            const sigWidth = 150;
-            const sigHeight = 150;
-            const sigX = canvasWidth - 340;
-            const sigY = canvasHeight - 480;
-
-            ctx.save();
-            ctx.drawImage(signatureQrUrl, sigX, sigY, sigWidth, sigHeight);
-            ctx.restore();
-            signatureLoaded = true;
-          }
+          ctx.save();
+          ctx.drawImage(signatureQrUrl, sigX, sigY, sigWidth, sigHeight);
+          ctx.restore();
+          signatureLoaded = true;
         } catch (e) {
-          console.error("Gagal memuat tanda tangan:", e.message);
+          console.error("Gagal memuat tanda tangan static:", e.message);
         }
+      } else {
+        console.warn("File tanda tangan static tidak ditemukan:", staticSignaturePath);
       }
 
       if (!signatureLoaded) {
@@ -473,17 +484,17 @@ class CertificateController {
 
       // Nama dan jabatan psikolog
       ctx.save();
-      ctx.font = "bold 26px Arial";
+      ctx.font = "bold 22px Arial";
       ctx.fillStyle = "#000";
       ctx.textAlign = "right";
       ctx.fillText(
         "(Pamila Maysari M.Psi.Psikolog)",
-        canvasWidth - 80,
+        canvasWidth - 50,
         canvasHeight - 300
       );
-      ctx.font = "semibold 26px Arial";
+      ctx.font = "semibold 22px Arial";
       ctx.fillStyle = "#000";
-      ctx.fillText("Psikolog", canvasWidth - 210, canvasHeight - 270);
+      ctx.fillText("Psikolog", canvasWidth - 180, canvasHeight - 270);
       ctx.restore();
 
       // Simpan file
@@ -492,8 +503,9 @@ class CertificateController {
       const buffer = canvas.toBuffer("image/png");
       fs.writeFileSync(filePath, buffer);
 
+      // ✅ PERBAIKAN: Update dengan field database
       await CertificateService.updateCertificate(certificate.id, {
-        certificateFileUrl: `/uploads/certificates/${fileName}`,
+        certificate_file_url: `/uploads/certificates/${fileName}`,
       });
 
       res.json({
@@ -503,8 +515,8 @@ class CertificateController {
           certificateUrl: `/uploads/certificates/${fileName}`,
           certificateId: certificate.id,
           fileName: fileName,
-          qrCodeUrl: qrCodeData, // Tambahkan ini untuk debugging
-          expirationDate: CertificateController.calculateExpirationDate(certificate.issueDate || new Date()),
+          qrCodeUrl: qrCodeData,
+          expirationDate: CertificateController.calculateExpirationDate(certificate.issue_date || new Date()),
           generatedBy: {
             id: req.user.id,
             email: req.user.email,
@@ -522,7 +534,7 @@ class CertificateController {
     }
   }
 
-  // Memperbarui sertifikat berdasarkan ID
+  // ✅ PERBAIKAN: Method update dengan field database
   static async updateCertificate(req, res) {
     try {
       const { id } = req.params;
@@ -530,11 +542,11 @@ class CertificateController {
       if (error) {
         // Clean up uploaded files if validation fails
         if (req.files) {
-          if (req.files.participantPhotoUrl) {
-            fs.unlinkSync(req.files.participantPhotoUrl[0].path);
+          if (req.files.participant_photo_url) {
+            fs.unlinkSync(req.files.participant_photo_url[0].path);
           }
-          if (req.files.signatureQrUrl) {
-            fs.unlinkSync(req.files.signatureQrUrl[0].path);
+          if (req.files.signature_qr_url) {
+            fs.unlinkSync(req.files.signature_qr_url[0].path);
           }
         }
         return res.status(400).json({
@@ -543,23 +555,20 @@ class CertificateController {
         });
       }
 
-      let participantPhotoUrl = req.body.participantPhotoUrl;
-      let signatureQrUrl = req.body.signatureQrUrl;
+      let participant_photo_url = req.body.participant_photo_url;
+      // ✅ PERBAIKAN: signature_qr_url update dihapus
 
       // Handle participant photo update
-      if (req.files && req.files.participantPhotoUrl) {
-        participantPhotoUrl = `/uploads/photos/${req.files.participantPhotoUrl[0].filename}`;
+      if (req.files && req.files.participant_photo_url) {
+        participant_photo_url = `/uploads/photos/${req.files.participant_photo_url[0].filename}`;
       }
 
-      // Handle signature QR image update
-      if (req.files && req.files.signatureQrUrl) {
-        signatureQrUrl = `/uploads/signatures/${req.files.signatureQrUrl[0].filename}`;
-      }
+      // ✅ PERBAIKAN: signature_qr_url handling dihapus
 
       const updateData = {
         ...value,
-        participantPhotoUrl: participantPhotoUrl,
-        signatureQrUrl: signatureQrUrl,
+        participant_photo_url: participant_photo_url,
+        // signature_qr_url dihapus
       };
 
       const updatedCertificate = await CertificateService.updateCertificate(
@@ -582,11 +591,11 @@ class CertificateController {
     } catch (error) {
       // Clean up uploaded files if error occurs
       if (req.files) {
-        if (req.files.participantPhotoUrl) {
-          fs.unlinkSync(req.files.participantPhotoUrl[0].path);
+        if (req.files.participant_photo_url) {
+          fs.unlinkSync(req.files.participant_photo_url[0].path);
         }
-        if (req.files.signatureQrUrl) {
-          fs.unlinkSync(req.files.signatureQrUrl[0].path);
+        if (req.files.signature_qr_url) {
+          fs.unlinkSync(req.files.signature_qr_url[0].path);
         }
       }
       console.error("Error saat memperbarui sertifikat:", error.message);
@@ -597,7 +606,7 @@ class CertificateController {
     }
   }
 
-  // Menghapus sertifikat berdasarkan ID
+  // Method lainnya tetap sama seperti sebelumnya
   static async deleteCertificate(req, res) {
     try {
       const { id } = req.params;
@@ -627,19 +636,14 @@ class CertificateController {
       const { id } = req.params;
       const certificate = await CertificateService.getCertificateById(id);
 
-      if (!certificate.certificateFileUrl) {
+      if (!certificate.certificate_file_url) {
         return res.status(404).json({
           success: false,
-          message:
-            "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
+          message: "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
         });
       }
 
-      const filePath = path.join(
-        __dirname,
-        "..",
-        certificate.certificateFileUrl
-      );
+      const filePath = path.join(__dirname, "..", certificate.certificate_file_url);
       console.log("File path yang dicek:", filePath);
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({
@@ -648,19 +652,21 @@ class CertificateController {
         });
       }
 
-      // Konversi PNG ke PDF dan kirim ke client
-      const fileName = `certificate-${certificate.certificateNumber}.pdf`;
-      res.setHeader(
-        "Content-disposition",
-        `attachment; filename="${fileName}"`
-      );
+      // ✅ PERBAIKAN: Path untuk halaman kedua (Hasil Test.png)
+      const hasilTestPath = path.join(__dirname, "../assets/template/Hasil Test.png");
+      console.log("Hasil Test path:", hasilTestPath);
+
+      // Konversi PNG ke PDF dengan 2 halaman dan kirim ke client
+      const fileName = `certificate-${certificate.certificate_number}.pdf`;
+      res.setHeader("Content-disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
-      const doc = new PDFDocument({
-        autoFirstPage: false,
-      });
+      
+      const doc = new PDFDocument({ autoFirstPage: false });
+      
       // Pipe PDF stream ke response
       doc.pipe(res);
-      // Dapatkan ukuran gambar PNG
+      
+      // ✅ HALAMAN 1: Sertifikat utama
       const sizeOf = require("image-size");
       let imageDimensions;
       try {
@@ -669,7 +675,8 @@ class CertificateController {
         // fallback default A4
         imageDimensions = { width: 595, height: 842, type: "png" };
       }
-      // Buat halaman PDF dengan ukuran gambar
+      
+      // Buat halaman PDF dengan ukuran gambar sertifikat
       doc.addPage({
         size: [imageDimensions.width, imageDimensions.height],
         margin: 0,
@@ -678,6 +685,37 @@ class CertificateController {
         width: imageDimensions.width,
         height: imageDimensions.height,
       });
+
+      // ✅ HALAMAN 2: Hasil Test (jika file ada)
+      if (fs.existsSync(hasilTestPath)) {
+        try {
+          let hasilTestDimensions;
+          try {
+            hasilTestDimensions = sizeOf(hasilTestPath);
+          } catch (e) {
+            // fallback default A4
+            hasilTestDimensions = { width: 595, height: 842, type: "png" };
+          }
+
+          // Tambah halaman kedua dengan ukuran gambar Hasil Test
+          doc.addPage({
+            size: [hasilTestDimensions.width, hasilTestDimensions.height],
+            margin: 0,
+          });
+          doc.image(hasilTestPath, 0, 0, {
+            width: hasilTestDimensions.width,
+            height: hasilTestDimensions.height,
+          });
+
+          console.log("✅ Halaman kedua (Hasil Test) berhasil ditambahkan ke PDF");
+        } catch (error) {
+          console.warn("⚠️ Gagal menambahkan halaman kedua:", error.message);
+          // Lanjutkan tanpa halaman kedua jika ada error
+        }
+      } else {
+        console.warn("⚠️ File Hasil Test.png tidak ditemukan:", hasilTestPath);
+        // Lanjutkan tanpa halaman kedua jika file tidak ada
+      }
 
       doc.end();
     } catch (error) {
@@ -701,13 +739,24 @@ class CertificateController {
         limit = 10,
       } = req.query;
 
-      // Validasi golongan SIM jika ada
+      // ✅ PERBAIKAN: Validasi golongan SIM sesuai database
       if (licenseClass) {
-        const validClasses = ["A", "B", "C"];
-        if (!validClasses.includes(licenseClass.toUpperCase())) {
+        const validClasses = ["A", "A Umum", "B1", "B1 Umum", "B2", "B2 Umum", "C", "C1", "C2", "D", "D1"];
+        if (!validClasses.includes(licenseClass)) {
           return res.status(400).json({
             success: false,
-            message: "Golongan SIM harus berupa A, B, atau C",
+            message: "Golongan SIM tidak valid",
+          });
+        }
+      }
+
+      // ✅ PERBAIKAN: Validasi certificate type sesuai database
+      if (certificateType) {
+        const validTypes = ["Baru", "Perpanjang"];
+        if (!validTypes.includes(certificateType)) {
+          return res.status(400).json({
+            success: false,
+            message: "Jenis sertifikat harus berupa 'Baru' atau 'Perpanjang'",
           });
         }
       }
@@ -722,7 +771,7 @@ class CertificateController {
 
       // Filter golongan SIM
       if (licenseClass && licenseClass.trim() !== "") {
-        filters.licenseClass = licenseClass.toUpperCase();
+        filters.licenseClass = licenseClass;
       }
 
       // Filter jenis sertifikat
@@ -785,14 +834,14 @@ class CertificateController {
         message: "Sertifikat ditemukan",
         data: {
           id: certificate.id,
-          participantFullName: certificate.participantFullName,
-          certificateNumber: certificate.certificateNumber,
-          licenseClass: certificate.licenseClass,
-          certificateType: certificate.certificateType,
-          issueDate: certificate.issueDate,
-          expirationDate: certificate.expirationDate,
-          certificateFileUrl: certificate.certificateFileUrl,
-          isValid: new Date() < new Date(certificate.expirationDate)
+          full_name: certificate.full_name,
+          certificate_number: certificate.certificate_number,
+          license_class: certificate.license_class,
+          certificate_type: certificate.certificate_type,
+          issue_date: certificate.issue_date,
+          expiration_date: certificate.expiration_date,
+          certificate_file_url: certificate.certificate_file_url,
+          isValid: new Date() < new Date(certificate.expiration_date)
         }
       });
     } catch (error) {
@@ -815,14 +864,14 @@ class CertificateController {
         message: "Sertifikat ditemukan",
         data: {
           id: certificate.id,
-          participantFullName: certificate.participantFullName,
-          certificateNumber: certificate.certificateNumber,
-          licenseClass: certificate.licenseClass,
-          certificateType: certificate.certificateType,
-          issueDate: certificate.issueDate,
-          expirationDate: certificate.expirationDate,
-          certificateFileUrl: certificate.certificateFileUrl,
-          isValid: new Date() < new Date(certificate.expirationDate)
+          full_name: certificate.full_name,
+          certificate_number: certificate.certificate_number,
+          license_class: certificate.license_class,
+          certificate_type: certificate.certificate_type,
+          issue_date: certificate.issue_date,
+          expiration_date: certificate.expiration_date,
+          certificate_file_url: certificate.certificate_file_url,
+          isValid: new Date() < new Date(certificate.expiration_date)
         }
       });
     } catch (error) {
@@ -842,14 +891,14 @@ class CertificateController {
       const { certificateNumber } = req.params;
       const certificate = await CertificateService.getCertificateByCertificateNumber(certificateNumber);
   
-      if (!certificate.certificateFileUrl) {
+      if (!certificate.certificate_file_url) {
         return res.status(404).json({
           success: false,
           message: "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
         });
       }
   
-      const filePath = path.join(__dirname, "..", certificate.certificateFileUrl);
+      const filePath = path.join(__dirname, "..", certificate.certificate_file_url);
       console.log("File path:", filePath);
       
       if (!fs.existsSync(filePath)) {
@@ -858,6 +907,10 @@ class CertificateController {
           message: "File sertifikat tidak ditemukan di server.",
         });
       }
+
+      // ✅ PERBAIKAN: Path untuk halaman kedua (Hasil Test.png)
+      const hasilTestPath = path.join(__dirname, "../assets/template/Hasil Test.png");
+      console.log("Hasil Test path:", hasilTestPath);
   
       // ✅ Set explicit CORS headers untuk download
       const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -865,8 +918,8 @@ class CertificateController {
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
       
-      // Konversi PNG ke PDF dan kirim ke client
-      const fileName = `certificate-${certificate.certificateNumber}.pdf`;
+      // Konversi PNG ke PDF dengan 2 halaman dan kirim ke client
+      const fileName = `certificate-${certificate.certificate_number}.pdf`;
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
       
@@ -888,18 +941,18 @@ class CertificateController {
       // Pipe PDF ke response
       doc.pipe(res);
       
-      // Dapatkan ukuran gambar PNG
+      // ✅ HALAMAN 1: Sertifikat utama
       let imageDimensions;
       try {
         const sizeOf = require("image-size");
         imageDimensions = sizeOf(filePath);
-        console.log("Image dimensions:", imageDimensions);
+        console.log("Certificate image dimensions:", imageDimensions);
       } catch (e) {
-        console.warn("Could not get image dimensions, using default:", e.message);
+        console.warn("Could not get certificate image dimensions, using default:", e.message);
         imageDimensions = { width: 595, height: 842, type: "png" };
       }
       
-      // Add page dan image
+      // Add halaman pertama
       doc.addPage({
         size: [imageDimensions.width, imageDimensions.height],
         margin: 0,
@@ -909,6 +962,40 @@ class CertificateController {
         width: imageDimensions.width,
         height: imageDimensions.height,
       });
+
+      // ✅ HALAMAN 2: Hasil Test (jika file ada)
+      if (fs.existsSync(hasilTestPath)) {
+        try {
+          let hasilTestDimensions;
+          try {
+            const sizeOf = require("image-size");
+            hasilTestDimensions = sizeOf(hasilTestPath);
+            console.log("Hasil Test image dimensions:", hasilTestDimensions);
+          } catch (e) {
+            console.warn("Could not get Hasil Test image dimensions, using default:", e.message);
+            hasilTestDimensions = { width: 595, height: 842, type: "png" };
+          }
+
+          // Tambah halaman kedua
+          doc.addPage({
+            size: [hasilTestDimensions.width, hasilTestDimensions.height],
+            margin: 0,
+          });
+          
+          doc.image(hasilTestPath, 0, 0, {
+            width: hasilTestDimensions.width,
+            height: hasilTestDimensions.height,
+          });
+
+          console.log("✅ Halaman kedua (Hasil Test) berhasil ditambahkan ke PDF");
+        } catch (error) {
+          console.warn("⚠️ Gagal menambahkan halaman kedua:", error.message);
+          // Lanjutkan tanpa halaman kedua jika ada error
+        }
+      } else {
+        console.warn("⚠️ File Hasil Test.png tidak ditemukan:", hasilTestPath);
+        // Lanjutkan tanpa halaman kedua jika file tidak ada
+      }
   
       doc.end();
       console.log("PDF generation completed for:", fileName);
@@ -934,14 +1021,14 @@ class CertificateController {
       const { id } = req.params;
       const certificate = await CertificateService.getCertificateById(id);
   
-      if (!certificate.certificateFileUrl) {
+      if (!certificate.certificate_file_url) {
         return res.status(404).json({
           success: false,
           message: "File sertifikat belum dibuat. Silakan generate terlebih dahulu.",
         });
       }
   
-      const filePath = path.join(__dirname, "..", certificate.certificateFileUrl);
+      const filePath = path.join(__dirname, "..", certificate.certificate_file_url);
       console.log("File path:", filePath);
       
       if (!fs.existsSync(filePath)) {
@@ -950,6 +1037,10 @@ class CertificateController {
           message: "File sertifikat tidak ditemukan di server.",
         });
       }
+
+      // ✅ PERBAIKAN: Path untuk halaman kedua (Hasil Test.png)
+      const hasilTestPath = path.join(__dirname, "../assets/template/Hasil Test.png");
+      console.log("Hasil Test path:", hasilTestPath);
   
       // ✅ Set explicit CORS headers untuk download
       const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -957,8 +1048,8 @@ class CertificateController {
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
       
-      // Konversi PNG ke PDF dan kirim ke client
-      const fileName = `certificate-${certificate.certificateNumber}.pdf`;
+      // Konversi PNG ke PDF dengan 2 halaman dan kirim ke client
+      const fileName = `certificate-${certificate.certificate_number}.pdf`;
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Type", "application/pdf");
       
@@ -980,18 +1071,18 @@ class CertificateController {
       // Pipe PDF ke response
       doc.pipe(res);
       
-      // Dapatkan ukuran gambar PNG
+      // ✅ HALAMAN 1: Sertifikat utama
       let imageDimensions;
       try {
         const sizeOf = require("image-size");
         imageDimensions = sizeOf(filePath);
-        console.log("Image dimensions:", imageDimensions);
+        console.log("Certificate image dimensions:", imageDimensions);
       } catch (e) {
-        console.warn("Could not get image dimensions, using default:", e.message);
+        console.warn("Could not get certificate image dimensions, using default:", e.message);
         imageDimensions = { width: 595, height: 842, type: "png" };
       }
       
-      // Add page dan image
+      // Add halaman pertama
       doc.addPage({
         size: [imageDimensions.width, imageDimensions.height],
         margin: 0,
@@ -1001,6 +1092,40 @@ class CertificateController {
         width: imageDimensions.width,
         height: imageDimensions.height,
       });
+
+      // ✅ HALAMAN 2: Hasil Test (jika file ada)
+      if (fs.existsSync(hasilTestPath)) {
+        try {
+          let hasilTestDimensions;
+          try {
+            const sizeOf = require("image-size");
+            hasilTestDimensions = sizeOf(hasilTestPath);
+            console.log("Hasil Test image dimensions:", hasilTestDimensions);
+          } catch (e) {
+            console.warn("Could not get Hasil Test image dimensions, using default:", e.message);
+            hasilTestDimensions = { width: 595, height: 842, type: "png" };
+          }
+
+          // Tambah halaman kedua
+          doc.addPage({
+            size: [hasilTestDimensions.width, hasilTestDimensions.height],
+            margin: 0,
+          });
+          
+          doc.image(hasilTestPath, 0, 0, {
+            width: hasilTestDimensions.width,
+            height: hasilTestDimensions.height,
+          });
+
+          console.log("✅ Halaman kedua (Hasil Test) berhasil ditambahkan ke PDF");
+        } catch (error) {
+          console.warn("⚠️ Gagal menambahkan halaman kedua:", error.message);
+          // Lanjutkan tanpa halaman kedua jika ada error
+        }
+      } else {
+        console.warn("⚠️ File Hasil Test.png tidak ditemukan:", hasilTestPath);
+        // Lanjutkan tanpa halaman kedua jika file tidak ada
+      }
   
       doc.end();
       console.log("PDF generation completed for:", fileName);
